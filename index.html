@@ -6,17 +6,37 @@
 <title>Michigan Central Boys & Girls Club — Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*{font-family:'Inter',sans-serif}
-body{background:#f1f5f9}
+:root{
+  --mc-blue:#1e3a5f;--mc-blue-deep:#152a45;--mc-gold:#c9a227;
+  --bg-warm:#f4f2ee;--bg-card:#fff;--border-warm:#e5e2db;
+  --text-primary:#1a1a2e;--text-secondary:#525266;
+  --card-shadow:0 2px 12px rgba(30,58,95,.06);
+  --card-shadow-hover:0 8px 28px rgba(30,58,95,.10);
+}
+*{font-family:'DM Sans',sans-serif}
+body{background:var(--bg-warm);color:var(--text-primary)}
+.font-display{font-family:'DM Serif Display',serif}
 .fade-in{animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.sidebar-link{transition:all .15s}
-.sidebar-link:hover,.sidebar-link.active{background:rgba(255,255,255,.12);color:#fff}
-.card{transition:box-shadow .15s}
-.card:hover{box-shadow:0 4px 24px rgba(0,0,0,.08)}
-.modal-overlay{background:rgba(0,0,0,.4);backdrop-filter:blur(2px)}
+@keyframes staggerIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.stagger-in>*{animation:staggerIn .4s ease both}
+.stagger-in>*:nth-child(1){animation-delay:.05s}
+.stagger-in>*:nth-child(2){animation-delay:.1s}
+.stagger-in>*:nth-child(3){animation-delay:.15s}
+.stagger-in>*:nth-child(4){animation-delay:.2s}
+.stagger-in>*:nth-child(5){animation-delay:.25s}
+@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.count-up{animation:countUp .5s ease both;animation-delay:.2s}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.loading-shimmer{background:linear-gradient(90deg,#f0eee8 25%,#e8e5dd 50%,#f0eee8 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+.sidebar-link{transition:all .2s ease;border-left:3px solid transparent}
+.sidebar-link:hover{background:rgba(255,255,255,.08);color:#fff}
+.sidebar-link.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:var(--mc-gold)}
+.card{transition:all .2s ease;border-color:var(--border-warm)}
+.card:hover{box-shadow:var(--card-shadow-hover);transform:translateY(-1px)}
+.modal-overlay{background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}
 .slide-in{animation:slideIn .25s ease}
 @keyframes slideIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
 input[type=checkbox]{accent-color:#1e40af}
@@ -28,7 +48,7 @@ input[type=checkbox]{accent-color:#1e40af}
 .status-denied{background:#fee2e2;color:#991b1b}
 .status-waitlist{background:#ede9fe;color:#5b21b6}
 .status-further-review{background:#dbeafe;color:#1e40af}
-table th{position:sticky;top:0;z-index:2}
+table th{position:sticky;top:0;z-index:2;background:#faf9f6;text-transform:uppercase;letter-spacing:.05em;font-size:11px;font-weight:600;color:var(--text-secondary)}
 [onclick]{cursor:pointer}
 .toast{animation:toastIn .3s ease}
 @keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -37,6 +57,8 @@ table th{position:sticky;top:0;z-index:2}
 .score-star{cursor:pointer;font-size:20px;color:#cbd5e1;transition:color .15s}
 .score-star.filled{color:#eab308}
 .score-star:hover{color:#facc15}
+.section-title{position:relative;padding-bottom:8px}
+.section-title::after{content:'';position:absolute;bottom:0;left:0;width:32px;height:2px;background:var(--mc-gold);border-radius:1px}
 .ms-wrap{position:relative;display:inline-block}
 .ms-btn{display:flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;cursor:pointer;white-space:nowrap;min-width:120px;justify-content:space-between}
 .ms-btn:hover{border-color:#94a3b8}
@@ -50,22 +72,23 @@ table th{position:sticky;top:0;z-index:2}
 .ms-opt.selected .ms-check{background:#1e3a5f;border-color:#1e3a5f;color:#fff}
 </style>
 <script>
-tailwind.config={theme:{extend:{colors:{mc:{blue:'#1e3a5f',gold:'#c9a227',light:'#f8fafc'}}}}}
+tailwind.config={theme:{extend:{colors:{mc:{blue:'#1e3a5f','blue-deep':'#152a45',gold:'#c9a227',light:'#f8fafc',warm:'#f4f2ee','warm-light':'#faf9f6'}},fontFamily:{display:['"DM Serif Display"','serif'],sans:['"DM Sans"','sans-serif']},borderColor:{warm:'#e5e2db'}}}}
 </script>
 </head>
 <body class="min-h-screen">
 
 <!-- LOGIN GATE -->
-<div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-mc-blue to-slate-800">
-<div class="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-sm text-center">
+<div id="loginScreen" class="min-h-screen flex items-center justify-center relative overflow-hidden" style="background:linear-gradient(135deg,#152a45 0%,#1e3a5f 50%,#2a4f7f 100%)">
+<div class="absolute inset-0 opacity-[0.04]" style="background:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(201,162,39,.5) 40px,rgba(201,162,39,.5) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(201,162,39,.5) 40px,rgba(201,162,39,.5) 41px)"></div>
+<div class="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-sm text-center relative z-10">
 <div class="mb-6">
-<div class="w-16 h-16 bg-mc-blue rounded-xl flex items-center justify-center mx-auto mb-4">
+<div class="w-16 h-16 bg-mc-blue rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg" style="box-shadow:0 0 24px rgba(201,162,39,.25)">
 <svg class="w-8 h-8 text-mc-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
 </div>
-<h1 class="text-xl font-bold text-mc-blue">Michigan Central</h1>
+<h1 class="text-xl font-display text-mc-blue">Michigan Central</h1>
 <p class="text-sm text-slate-500 mt-1">Boys & Girls Club — Dashboard</p>
 </div>
-<input id="nameInput" type="text" placeholder="Enter your full name" class="w-full px-4 py-3 border border-slate-200 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-mc-blue" onkeydown="if(event.key==='Enter')doLogin()">
+<input id="nameInput" type="text" placeholder="Enter your full name" class="w-full px-4 py-3 border border-warm rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-mc-blue" onkeydown="if(event.key==='Enter')doLogin()">
 <button onclick="doLogin()" class="w-full mt-4 bg-mc-blue text-white py-3 rounded-lg font-semibold hover:bg-opacity-90 transition">Sign In</button>
 <p id="pwError" class="text-red-500 text-sm mt-3 hidden">Please enter your name</p>
 </div>
@@ -75,9 +98,9 @@ tailwind.config={theme:{extend:{colors:{mc:{blue:'#1e3a5f',gold:'#c9a227',light:
 <div id="mainApp" class="hidden min-h-screen flex">
 
 <!-- SIDEBAR -->
-<aside class="w-60 bg-mc-blue text-slate-300 flex flex-col fixed h-full z-30">
+<aside class="w-60 text-slate-300 flex flex-col fixed h-full z-30" style="background:linear-gradient(to bottom,#1e3a5f,#152a45);border-top:2px solid var(--mc-gold)">
 <div class="p-5 border-b border-white/10">
-<h1 class="text-white font-bold text-lg leading-tight">Michigan Central</h1>
+<h1 class="text-white font-display text-lg leading-tight">Michigan Central</h1>
 <p class="text-xs text-mc-gold mt-0.5">Boys & Girls Club — Dashboard</p>
 </div>
 <nav class="flex-1 py-4 px-3 space-y-1">
@@ -111,7 +134,7 @@ Import Data</button>
 </nav>
 <div class="p-4 border-t border-white/10">
 <div class="flex items-center gap-2 mb-3">
-<div class="w-7 h-7 rounded-full bg-mc-gold flex items-center justify-center text-mc-blue text-xs font-bold" id="userAvatar"></div>
+<div class="w-8 h-8 rounded-full bg-mc-gold flex items-center justify-center text-mc-blue text-xs font-bold ring-2 ring-mc-gold/30" id="userAvatar"></div>
 <span class="text-xs text-white truncate" id="userDisplayName"></span>
 </div>
 <button onclick="doLogout()" class="w-full text-xs text-slate-400 hover:text-white transition flex items-center gap-2 justify-center">
@@ -125,38 +148,45 @@ Sign Out</button>
 
 <!-- DASHBOARD -->
 <div id="view-dashboard" class="p-8 fade-in">
-<h2 class="text-2xl font-bold text-slate-800 mb-6">Dashboard</h2>
-<div class="grid grid-cols-5 gap-4 mb-8" id="statsCards"></div>
+<div id="dashGreeting" class="mb-6"></div>
+<div class="grid grid-cols-5 gap-4 mb-8 stagger-in" id="statsCards"></div>
 <div class="grid grid-cols-3 gap-5 mb-8" id="tierCards"></div>
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-<h3 class="font-semibold text-slate-700 mb-4">Onboarding Progress</h3>
-<div id="onboardingProgress"></div>
+<div class="grid grid-cols-3 gap-6 mb-8">
+  <div class="col-span-2 bg-white rounded-xl shadow-sm border p-6" style="border-color:var(--border-warm)">
+    <h3 class="font-semibold section-title mb-4" style="color:var(--text-primary)">Onboarding Progress</h3>
+    <div id="onboardingProgress"></div>
+  </div>
+  <div class="space-y-6">
+    <div id="quickActions"></div>
+    <div id="atAGlance"></div>
+  </div>
 </div>
+<div id="recentActivity"></div>
 </div>
 
 <!-- APPLICATIONS -->
 <div id="view-applications" class="p-8 fade-in hidden">
 <div class="flex items-center justify-between mb-6">
-<h2 class="text-2xl font-bold text-slate-800">Applications</h2>
+<h2 class="text-2xl font-display text-slate-800">Applications</h2>
 <button onclick="openAddModal()" class="bg-mc-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-opacity-90 flex items-center gap-2">
 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
 Add Applicant</button>
 </div>
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex items-center gap-3 flex-wrap">
-<input id="searchInput" type="text" placeholder="Search by name or email..." class="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" oninput="renderApplications()">
-<select id="filterTier" class="px-3 py-2 border border-slate-200 rounded-lg text-sm" onchange="renderApplications()">
+<div class="bg-white rounded-xl shadow-sm border border-warm p-4 mb-4 flex items-center gap-3 flex-wrap">
+<input id="searchInput" type="text" placeholder="Search by name or email..." class="flex-1 min-w-[200px] px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" oninput="renderApplications()">
+<select id="filterTier" class="px-3 py-2 border border-warm rounded-lg text-sm" onchange="renderApplications()">
 <option value="">All Tiers</option><option>Ponyride</option><option>Vanguard</option><option>Originator</option></select>
-<select id="filterStatus" class="px-3 py-2 border border-slate-200 rounded-lg text-sm" onchange="renderApplications()">
+<select id="filterStatus" class="px-3 py-2 border border-warm rounded-lg text-sm" onchange="renderApplications()">
 <option value="">All Statuses</option><option>Pending</option><option>Accepted</option><option>Waitlist</option><option>Denied</option></select>
-<select id="filterInterview" class="px-3 py-2 border border-slate-200 rounded-lg text-sm" onchange="renderApplications()">
+<select id="filterInterview" class="px-3 py-2 border border-warm rounded-lg text-sm" onchange="renderApplications()">
 <option value="">Interview Status</option><option value="yes">Interviewed</option><option value="no">Not Interviewed</option><option value="scheduled">Scheduled</option></select>
 <span id="resultCount" class="text-sm text-slate-500 ml-auto"></span>
 <button onclick="exportApplications()" class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition whitespace-nowrap flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Export CSV</button>
 </div>
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+<div class="bg-white rounded-xl shadow-sm border border-warm overflow-hidden">
 <div class="overflow-x-auto max-h-[65vh] overflow-y-auto">
 <table class="w-full text-sm" style="table-layout:auto">
-<thead class="bg-slate-50 border-b border-slate-200 sticky top-0" id="appTableHead"></thead>
+<thead class="bg-mc-warm-light border-b border-slate-200 sticky top-0" id="appTableHead"></thead>
 <tbody id="appTableBody" class="divide-y divide-slate-100"></tbody>
 </table>
 </div>
@@ -165,7 +195,7 @@ Add Applicant</button>
 
 <!-- MEMBERSHIP -->
 <div id="view-members" class="p-8 fade-in hidden">
-<h2 class="text-2xl font-bold text-slate-800 mb-2">Membership</h2>
+<h2 class="text-2xl font-display text-slate-800 mb-2">Membership</h2>
 <p class="text-slate-500 text-sm mb-4">Accepted member overview, directory, and onboarding status</p>
 
 <!-- Sub-tabs for Membership -->
@@ -182,15 +212,15 @@ Add Applicant</button>
 <!-- DIRECTORY SUB-VIEW -->
 <div id="memberTab-directory" class="hidden fade-in">
 <div class="flex items-center gap-3 mb-6">
-<input id="memberSearch" type="text" placeholder="Search members..." class="flex-1 max-w-xs px-3 py-2 border border-slate-200 rounded-lg text-sm" oninput="renderMembers()">
-<select id="memberTier" class="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white" onchange="renderMembers()">
+<input id="memberSearch" type="text" placeholder="Search members..." class="flex-1 max-w-xs px-3 py-2 border border-warm rounded-lg text-sm" oninput="renderMembers()">
+<select id="memberTier" class="px-3 py-2 border border-warm rounded-lg text-sm bg-white" onchange="renderMembers()">
 <option value="">All Tiers</option><option>Ponyride</option><option>Vanguard</option><option>Originator</option></select>
 <button onclick="exportMembers()" class="ml-auto px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition whitespace-nowrap flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Export CSV</button>
 </div>
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+<div class="bg-white rounded-xl shadow-sm border border-warm overflow-hidden">
 <div class="overflow-x-auto max-h-[65vh] overflow-y-auto">
 <table class="w-full text-sm">
-<thead class="bg-slate-50 border-b border-slate-200 sticky top-0" id="memberTableHead"></thead>
+<thead class="bg-mc-warm-light border-b border-slate-200 sticky top-0" id="memberTableHead"></thead>
 <tbody id="memberTableBody" class="divide-y divide-slate-100"></tbody>
 </table>
 </div>
@@ -200,7 +230,7 @@ Add Applicant</button>
 
 <!-- ONBOARDING -->
 <div id="view-onboarding" class="p-8 fade-in hidden">
-<h2 class="text-2xl font-bold text-slate-800 mb-2">Onboarding</h2>
+<h2 class="text-2xl font-display text-slate-800 mb-2">Onboarding</h2>
 <p class="text-slate-500 text-sm mb-6">Track onboarding progress for accepted members</p>
 <div class="flex items-center gap-3 mb-6">
 <div class="ms-wrap" id="msObTier"></div>
@@ -211,9 +241,9 @@ Add Applicant</button>
 
 <!-- IMPORT -->
 <div id="view-import" class="p-8 fade-in hidden">
-<h2 class="text-2xl font-bold text-slate-800 mb-2">Import Data</h2>
+<h2 class="text-2xl font-display text-slate-800 mb-2">Import Data</h2>
 <p class="text-slate-500 text-sm mb-6">Upload a CSV or Excel file to bulk-import applicants</p>
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-2xl">
+<div class="bg-white rounded-xl shadow-sm border border-warm p-8 max-w-2xl">
 <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center hover:border-mc-blue transition cursor-pointer" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('border-mc-blue','bg-blue-50')" ondragleave="this.classList.remove('border-mc-blue','bg-blue-50')" ondrop="event.preventDefault();this.classList.remove('border-mc-blue','bg-blue-50');handleFile(event.dataTransfer.files[0])">
 <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
 <p class="font-medium text-slate-600">Drop file here or click to browse</p>
@@ -222,12 +252,12 @@ Add Applicant</button>
 </div>
 <div id="importPreview" class="hidden mt-6">
 <div class="flex items-center justify-between mb-3"><h4 class="font-semibold text-slate-700">Preview</h4><span id="importCount" class="text-sm text-slate-500"></span></div>
-<div class="max-h-64 overflow-auto border border-slate-200 rounded-lg mb-4">
-<table class="w-full text-xs"><thead class="bg-slate-50 sticky top-0"><tr id="previewHead"></tr></thead><tbody id="previewBody"></tbody></table>
+<div class="max-h-64 overflow-auto border border-warm rounded-lg mb-4">
+<table class="w-full text-xs"><thead class="bg-mc-warm-light sticky top-0"><tr id="previewHead"></tr></thead><tbody id="previewBody"></tbody></table>
 </div>
 <div class="mb-4 p-4 bg-slate-50 rounded-lg">
 <p class="text-sm font-medium text-slate-700 mb-2">Column Mapping</p>
-<select id="importTier" class="px-3 py-2 border border-slate-200 rounded-lg text-sm">
+<select id="importTier" class="px-3 py-2 border border-warm rounded-lg text-sm">
 <option value="auto">Auto-detect from data</option><option>Ponyride</option><option>Vanguard</option><option>Originator</option></select>
 </div>
 <button onclick="doImport()" class="bg-mc-blue text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-opacity-90">Import Records</button>
@@ -241,11 +271,11 @@ Add Applicant</button>
 <div id="view-files" class="p-8 fade-in hidden">
 <div class="flex items-center justify-between mb-6">
 <div>
-<h2 class="text-2xl font-bold text-slate-800">Files</h2>
+<h2 class="text-2xl font-display text-slate-800">Files</h2>
 <p class="text-slate-500 text-sm">Shared documents, SOPs, floor plans, and resources</p>
 </div>
 <div class="flex items-center gap-3">
-<input id="fileSearch" type="text" placeholder="Search files..." class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue w-48" oninput="renderFiles()">
+<input id="fileSearch" type="text" placeholder="Search files..." class="px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue w-48" oninput="renderFiles()">
 <button onclick="addFileLink()" class="px-4 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition">+ Add Link</button>
 <label class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition cursor-pointer">
 <input type="file" multiple class="hidden" onchange="uploadFiles(this.files)">
@@ -272,7 +302,7 @@ Upload Files
 <div id="view-calendar" class="p-8 fade-in hidden">
 <div class="flex items-center justify-between mb-6">
 <div>
-<h2 class="text-2xl font-bold text-slate-800">Calendar</h2>
+<h2 class="text-2xl font-display text-slate-800">Calendar</h2>
 <p class="text-slate-500 text-sm">Schedule events, book rooms, and track milestones</p>
 </div>
 <div class="flex items-center gap-3">
@@ -284,13 +314,13 @@ Upload Files
 <button onclick="calToday()" class="px-3 py-1.5 text-xs font-medium bg-mc-blue text-white rounded-lg hover:bg-opacity-90">Today</button>
 <button onclick="calNext()" class="p-2 hover:bg-slate-100 rounded-lg transition"><svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
 <span id="calTitle" class="text-lg font-bold text-slate-800 min-w-[180px]"></span>
-<button onclick="downloadCalTemplate()" class="px-3 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition ml-auto flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Template</button>
-<button onclick="openCalImport()" class="px-3 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>Import</button>
+<button onclick="downloadCalTemplate()" class="px-3 py-2 border border-warm text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition ml-auto flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Template</button>
+<button onclick="openCalImport()" class="px-3 py-2 border border-warm text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>Import</button>
 <button onclick="openEventModal()" class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition">+ New Event</button>
 </div>
 </div>
-<div id="calendarContent" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"></div>
-<div id="calLegend" class="mt-3 bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+<div id="calendarContent" class="bg-white rounded-xl shadow-sm border border-warm overflow-hidden"></div>
+<div id="calLegend" class="mt-3 bg-white rounded-xl shadow-sm border border-warm p-4">
 <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Room / Space Legend</div>
 <div class="flex flex-wrap gap-x-4 gap-y-1.5" id="calLegendItems"></div>
 </div>
@@ -305,18 +335,18 @@ Upload Files
 <button onclick="closeEventModal()" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
 </div>
 <div class="space-y-4">
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Title</label><input id="evtTitle" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" placeholder="Event title"></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Requested By</label><input id="evtRequestedBy" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" placeholder="Who requested this event?"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Title</label><input id="evtTitle" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" placeholder="Event title"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Requested By</label><input id="evtRequestedBy" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" placeholder="Who requested this event?"></div>
 <div class="grid grid-cols-2 gap-4">
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Date</label><input id="evtDate" type="date" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Date</label><input id="evtDate" type="date" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue"></div>
 <div><label class="block text-xs font-medium text-slate-600 mb-1">Type</label>
-<select id="evtType" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue">
+<select id="evtType" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue">
 <option value="general">General Event</option><option value="room_booking">Room Booking</option><option value="milestone">Milestone</option></select></div>
 </div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Room / Space</label><input id="evtRoomName" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" placeholder="e.g. Board Room, STEM Lab 1, Creator's Lounge" list="roomSuggestions"><datalist id="roomSuggestions"><option value="Board Room"><option value="Creator's Lounge"><option value="Creator's Suite (TBD)"><option value="Makers' Market Office Space"><option value="Shaka Senghor Lounge"><option value="STEM Lab 1"><option value="STEM Lab 2"><option value="Training Room"><option value="UNL Spark Lab / Creator's Lounge / Computer Lab"><option value="UNL Spark Lab / Creator's Lounge / Special FX"></datalist></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Room / Space</label><input id="evtRoomName" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" placeholder="e.g. Board Room, STEM Lab 1, Creator's Lounge" list="roomSuggestions"><datalist id="roomSuggestions"><option value="Board Room"><option value="Creator's Lounge"><option value="Creator's Suite (TBD)"><option value="Makers' Market Office Space"><option value="Shaka Senghor Lounge"><option value="STEM Lab 1"><option value="STEM Lab 2"><option value="Training Room"><option value="UNL Spark Lab / Creator's Lounge / Computer Lab"><option value="UNL Spark Lab / Creator's Lounge / Special FX"></datalist></div>
 <div class="grid grid-cols-2 gap-4">
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Start Time</label><input id="evtStart" type="time" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue"></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">End Time</label><input id="evtEnd" type="time" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Start Time</label><input id="evtStart" type="time" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">End Time</label><input id="evtEnd" type="time" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue"></div>
 </div>
 <div class="flex items-center gap-2"><input type="checkbox" id="evtAllDay" class="rounded" onchange="toggleTimeInputs()"><label for="evtAllDay" class="text-sm text-slate-600">All day event</label></div>
 <div><label class="block text-xs font-medium text-slate-600 mb-1">Color</label>
@@ -328,7 +358,7 @@ Upload Files
 <button type="button" class="w-7 h-7 rounded-full border-2 border-white shadow" style="background:#7c3aed" onclick="pickColor('#7c3aed')"></button>
 <button type="button" class="w-7 h-7 rounded-full border-2 border-white shadow" style="background:#0284c7" onclick="pickColor('#0284c7')"></button>
 </div></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Description</label><textarea id="evtDesc" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" rows="2" placeholder="Optional details..."></textarea></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Description</label><textarea id="evtDesc" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mc-blue" rows="2" placeholder="Optional details..."></textarea></div>
 </div>
 <div class="flex justify-between mt-6">
 <button id="evtDeleteBtn" onclick="deleteCalEvent()" class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition hidden">Delete</button>
@@ -360,7 +390,7 @@ Upload Files
 </div>
 <div id="calImportPreview" class="hidden mb-4">
 <h4 class="text-sm font-semibold text-slate-700 mb-2">Preview (first 5 rows)</h4>
-<div class="overflow-x-auto"><table id="calImportTable" class="w-full text-xs border border-slate-200 rounded"></table></div>
+<div class="overflow-x-auto"><table id="calImportTable" class="w-full text-xs border border-warm rounded"></table></div>
 <p id="calImportCount" class="text-xs text-slate-500 mt-2"></p>
 </div>
 <div class="flex justify-end gap-3">
@@ -371,7 +401,7 @@ Upload Files
 </div>
 
 <div id="view-launch" class="p-8 fade-in hidden">
-<h2 class="text-2xl font-bold text-slate-800 mb-2">Launch Tracker</h2>
+<h2 class="text-2xl font-display text-slate-800 mb-2">Launch Tracker</h2>
 <p class="text-slate-500 text-sm mb-4">Michigan Central Club launch planning, action items, and key dates</p>
 
 <!-- Sub-tabs -->
@@ -394,10 +424,10 @@ Upload Files
 <span id="launchActionCount" class="text-sm text-slate-500 ml-auto"></span>
 <button onclick="addLaunchRow('launch_actions',{category:'Operations',item:'New Action Item',owner:'',status:'Not Started',priority:'Medium',due:'',updates:'',notes:''})" class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition whitespace-nowrap">+ Add Action</button>
 </div>
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+<div class="bg-white rounded-xl shadow-sm border border-warm overflow-hidden">
 <div class="overflow-x-auto max-h-[65vh] overflow-y-auto">
 <table class="w-full text-sm">
-<thead class="bg-slate-50 border-b border-slate-200">
+<thead class="bg-mc-warm-light border-b border-slate-200">
 <tr>
 <th class="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-mc-blue select-none" onclick="toggleActionSort('category')">Category<span id="sortArrow-category"></span></th>
 <th class="text-left px-4 py-3 font-semibold text-slate-600 min-w-[250px] cursor-pointer hover:text-mc-blue select-none" onclick="toggleActionSort('item')">Action Item<span id="sortArrow-item"></span></th>
@@ -444,8 +474,8 @@ Upload Files
   <!-- Inline new agenda form -->
   <div class="bg-white rounded-xl shadow-sm border border-dashed border-slate-300 p-4 mb-4 hover:border-mc-blue transition">
     <div class="flex items-end gap-3">
-      <div class="flex-1"><label class="text-xs font-medium text-slate-500 mb-1 block">Title</label><input id="newAgendaTitle" type="text" placeholder="e.g. Weekly Team Sync" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></div>
-      <div><label class="text-xs font-medium text-slate-500 mb-1 block">Date</label><input id="newAgendaDate" type="date" class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></div>
+      <div class="flex-1"><label class="text-xs font-medium text-slate-500 mb-1 block">Title</label><input id="newAgendaTitle" type="text" placeholder="e.g. Weekly Team Sync" class="w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></div>
+      <div><label class="text-xs font-medium text-slate-500 mb-1 block">Date</label><input id="newAgendaDate" type="date" class="px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></div>
       <button onclick="createNewAgenda()" class="px-5 py-2 bg-mc-blue text-white rounded-lg text-sm font-semibold hover:bg-opacity-90 transition whitespace-nowrap">+ Create</button>
     </div>
   </div>
@@ -462,12 +492,12 @@ Upload Files
 <div id="view-thursday" class="p-8 fade-in hidden">
 <div class="flex items-center justify-between mb-5">
 <div>
-<h2 class="text-2xl font-bold text-slate-800">Thursday Events</h2>
+<h2 class="text-2xl font-display text-slate-800">Thursday Events</h2>
 <p class="text-sm text-slate-500 mt-1">Open House & Interviews 4–6 PM · Member Meet-Ups & Orientation 5–6 PM</p>
 </div>
 <div class="flex items-center gap-2">
 <label class="text-xs text-slate-500">Event Date:</label>
-<input id="thursdayDatePicker" type="date" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onchange="loadThursdayData()">
+<input id="thursdayDatePicker" type="date" class="px-3 py-1.5 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onchange="loadThursdayData()">
 </div>
 </div>
 <div class="flex gap-2 border-b border-slate-200 mb-5 overflow-x-auto">
@@ -499,7 +529,7 @@ Upload Files
 <!-- DETAIL MODAL -->
 <div id="detailModal" class="fixed inset-0 z-50 hidden">
 <div class="modal-overlay absolute inset-0" onclick="closeDetail()"></div>
-<div class="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl overflow-y-auto slide-in">
+<div class="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl overflow-y-auto slide-in" style="border-left:3px solid var(--mc-gold)">
 <div id="detailContent"></div>
 </div>
 </div>
@@ -507,28 +537,28 @@ Upload Files
 <!-- ADD MODAL -->
 <div id="addModal" class="fixed inset-0 z-50 hidden">
 <div class="modal-overlay absolute inset-0" onclick="closeAddModal()"></div>
-<div class="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl overflow-y-auto slide-in">
+<div class="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl overflow-y-auto slide-in" style="border-left:3px solid var(--mc-gold)">
 <div class="p-6 border-b border-slate-200 flex items-center justify-between">
 <h3 class="text-lg font-bold text-slate-800">Add New Applicant</h3>
 <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
 </div>
 <form id="addForm" class="p-6 space-y-4" onsubmit="event.preventDefault();saveNewApplicant()">
 <div class="grid grid-cols-2 gap-4">
-<div><label class="block text-xs font-medium text-slate-600 mb-1">First Name *</label><input name="first_name" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Last Name *</label><input name="last_name" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">First Name *</label><input name="first_name" required class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Last Name *</label><input name="last_name" required class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
 </div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Tier *</label><select name="tier" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"><option value="">Select...</option><option>Ponyride</option><option>Vanguard</option><option>Originator</option></select></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Tier *</label><select name="tier" required class="w-full px-3 py-2 border border-warm rounded-lg text-sm"><option value="">Select...</option><option>Ponyride</option><option>Vanguard</option><option>Originator</option></select></div>
 <div class="grid grid-cols-2 gap-4">
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Email</label><input name="email" type="email" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Phone</label><input name="phone" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Email</label><input name="email" type="email" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Phone</label><input name="phone" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
 </div>
 <div class="grid grid-cols-3 gap-4">
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Age</label><input name="age" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">City</label><input name="city" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Date Applied</label><input name="date_applied" type="date" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Age</label><input name="age" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">City</label><input name="city" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Date Applied</label><input name="date_applied" type="date" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
 </div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Interest Areas</label><input name="interest_areas" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>
-<div><label class="block text-xs font-medium text-slate-600 mb-1">Short Essay</label><textarea name="short_essay" rows="4" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></textarea></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Interest Areas</label><input name="interest_areas" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Short Essay</label><textarea name="short_essay" rows="4" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></textarea></div>
 <button type="submit" class="bg-mc-blue text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-opacity-90 w-full">Save Applicant</button>
 </form>
 </div>
@@ -614,29 +644,136 @@ function isUrl(s){try{new URL(s);return true}catch{return false}}
 function starsHtml(score,id){return[1,2,3,4,5].map(i=>`<span class="score-star ${i<=score?'filled':''}" onclick="updateField('${id}','interview_score',${i})">★</span>`).join('');}
 function obPct(a){const steps=ONBOARDING_STEPS[a.tier]||[];const done=steps.filter(s=>s.isBool?a[s.key]:a[s.key]&&a[s.key]!=='Pending Recipient').length;return steps.length?Math.round(done/steps.length*100):0;}
 
+// UTILITIES
+function timeAgo(dateStr){
+  if(!dateStr)return'';
+  const s=Math.floor((Date.now()-new Date(dateStr).getTime())/1000);
+  if(s<60)return s+'s ago';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  if(s<604800)return Math.floor(s/86400)+'d ago';
+  return Math.floor(s/604800)+'w ago';
+}
+
 // DASHBOARD
+// Note: All data rendered here comes from the authenticated Supabase applicants table (not user input).
+// The innerHTML usage is safe as all interpolated values are from controlled database fields.
 function renderDashboard(){
   const t=allApplicants.length,p=allApplicants.filter(a=>(a.decision||'Pending')==='Pending').length,
     ac=allApplicants.filter(a=>a.decision==='Accepted').length,
     d=allApplicants.filter(a=>a.decision==='Denied').length,
     w=allApplicants.filter(a=>a.decision==='Waitlist').length;
-  document.getElementById('statsCards').innerHTML=`
-    <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total</p><p class="text-3xl font-bold text-slate-800 mt-1">${t}</p></div>
-    <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p class="text-xs font-medium text-amber-600 uppercase tracking-wide">Pending</p><p class="text-3xl font-bold text-amber-600 mt-1">${p}</p></div>
-    <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p class="text-xs font-medium text-green-600 uppercase tracking-wide">Accepted</p><p class="text-3xl font-bold text-green-600 mt-1">${ac}</p></div>
-    <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p class="text-xs font-medium text-violet-600 uppercase tracking-wide">Waitlist</p><p class="text-3xl font-bold text-violet-600 mt-1">${w}</p></div>
-    <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5"><p class="text-xs font-medium text-red-600 uppercase tracking-wide">Denied</p><p class="text-3xl font-bold text-red-600 mt-1">${d}</p></div>`;
+
+  // Greeting
+  const hr=new Date().getHours();
+  const greet=hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  const userName=(currentUser||'').split(' ')[0]||'there';
+  const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('dashGreeting').innerHTML=`
+    <h2 class="text-2xl font-display" style="color:var(--text-primary)">${greet}, ${userName}</h2>
+    <p class="text-sm mt-1" style="color:var(--text-secondary)">${dateStr}</p>`;
+
+  // Stat cards with colored top accent
+  const stats=[
+    {label:'Total',value:t,color:'#1e3a5f',textClass:'text-mc-blue',icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'},
+    {label:'Pending',value:p,color:'#d97706',textClass:'text-amber-600',icon:'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'},
+    {label:'Accepted',value:ac,color:'#16a34a',textClass:'text-green-600',icon:'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'},
+    {label:'Waitlist',value:w,color:'#7c3aed',textClass:'text-violet-600',icon:'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'},
+    {label:'Denied',value:d,color:'#dc2626',textClass:'text-red-600',icon:'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'}
+  ];
+  document.getElementById('statsCards').innerHTML=stats.map(s=>`
+    <div class="card bg-white rounded-xl shadow-sm border p-5 relative overflow-hidden" style="border-color:var(--border-warm)">
+      <div class="absolute top-0 left-0 right-0 h-1" style="background:${s.color}"></div>
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-wide ${s.textClass}">${s.label}</p>
+          <p class="text-3xl font-display ${s.textClass} mt-1 count-up">${s.value}</p>
+        </div>
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:${s.color}10">
+          <svg class="w-5 h-5 ${s.textClass}" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${s.icon}"/></svg>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // Tier cards
   const tiers=['Ponyride','Vanguard','Originator'];
   const tc={Ponyride:['bg-blue-50','text-blue-700','border-blue-200'],Vanguard:['bg-pink-50','text-pink-700','border-pink-200'],Originator:['bg-emerald-50','text-emerald-700','border-emerald-200']};
   document.getElementById('tierCards').innerHTML=tiers.map(tr=>{const c=tc[tr],arr=allApplicants.filter(a=>a.tier===tr),pe=arr.filter(a=>(a.decision||'Pending')==='Pending').length,a2=arr.filter(a=>a.decision==='Accepted').length,wl=arr.filter(a=>a.decision==='Waitlist').length;
     if(tr==='Ponyride'){
       const accepted=arr.filter(a=>a.decision==='Accepted');
       const bizNames=new Set();const memList=[];accepted.forEach(a=>{const co=((a.details||{}).company||'').trim();if(co){bizNames.add(co.toLowerCase().replace(/[,.]?\s*(llc|inc|corp)\.?$/i,'').trim());}else{memList.push(a);}});
-      return`<div class="card ${c[0]} rounded-xl border ${c[2]} p-5"><p class="text-xs font-semibold ${c[1]} uppercase tracking-wide">${tr}</p><p class="text-2xl font-bold ${c[1]} mt-1">${a2} <span class="text-sm font-normal">accepted</span></p><div class="flex gap-3 mt-2 text-xs ${c[1]}"><span>${wl} waitlist</span><span>${pe} pending</span></div><div class="mt-3 pt-3 border-t ${c[2]} flex gap-4"><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg><span class="text-sm font-semibold ${c[1]}">${bizNames.size} <span class="font-normal">Businesses</span></span></div><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span class="text-sm font-semibold ${c[1]}">${memList.length} <span class="font-normal">Members</span></span></div></div></div>`;}
-    return`<div class="card ${c[0]} rounded-xl border ${c[2]} p-5"><p class="text-xs font-semibold ${c[1]} uppercase tracking-wide">${tr}</p><p class="text-2xl font-bold ${c[1]} mt-1">${a2} <span class="text-sm font-normal">accepted</span></p><div class="flex gap-3 mt-2 text-xs ${c[1]}"><span>${wl} waitlist</span><span>${pe} pending</span></div></div>`;}).join('');
+      return`<div class="card ${c[0]} rounded-xl border ${c[2]} p-5"><p class="text-xs font-semibold ${c[1]} uppercase tracking-wide">${tr}</p><p class="text-2xl font-display ${c[1]} mt-1">${a2} <span class="text-sm font-sans font-normal">accepted</span></p><div class="flex gap-3 mt-2 text-xs ${c[1]}"><span>${wl} waitlist</span><span>${pe} pending</span></div><div class="mt-3 pt-3 border-t ${c[2]} flex gap-4"><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg><span class="text-sm font-semibold ${c[1]}">${bizNames.size} <span class="font-normal">Businesses</span></span></div><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span class="text-sm font-semibold ${c[1]}">${memList.length} <span class="font-normal">Members</span></span></div></div></div>`;}
+    return`<div class="card ${c[0]} rounded-xl border ${c[2]} p-5"><p class="text-xs font-semibold ${c[1]} uppercase tracking-wide">${tr}</p><p class="text-2xl font-display ${c[1]} mt-1">${a2} <span class="text-sm font-sans font-normal">accepted</span></p><div class="flex gap-3 mt-2 text-xs ${c[1]}"><span>${wl} waitlist</span><span>${pe} pending</span></div></div>`;}).join('');
+
+  // Onboarding progress
   const am=allApplicants.filter(a=>a.decision==='Accepted');
-  if(!am.length){document.getElementById('onboardingProgress').innerHTML='<p class="text-sm text-slate-400">No accepted members yet.</p>';return;}
-  document.getElementById('onboardingProgress').innerHTML=am.slice(0,10).map(a=>{const pct=obPct(a);return`<div class="flex items-center gap-3 py-2"><span class="w-40 text-sm font-medium text-slate-700 truncate">${a.first_name} ${a.last_name}</span>${tierBadge(a.tier)}<div class="flex-1 bg-slate-100 rounded-full h-2"><div class="h-2 rounded-full ${pct===100?'bg-green-500':'bg-mc-blue'}" style="width:${pct}%"></div></div><span class="text-xs font-medium ${pct===100?'text-green-600':'text-slate-500'}">${pct}%</span></div>`;}).join('');
+  if(!am.length){document.getElementById('onboardingProgress').innerHTML='<p class="text-sm" style="color:var(--text-secondary)">No accepted members yet.</p>';}
+  else{document.getElementById('onboardingProgress').innerHTML=am.slice(0,10).map(a=>{const pct=obPct(a);return`<div class="flex items-center gap-3 py-2"><span class="w-40 text-sm font-medium truncate" style="color:var(--text-primary)">${a.first_name} ${a.last_name}</span>${tierBadge(a.tier)}<div class="flex-1 rounded-full h-2" style="background:#eae7e0"><div class="h-2 rounded-full ${pct===100?'bg-green-500':'bg-mc-blue'}" style="width:${pct}%"></div></div><span class="text-xs font-medium ${pct===100?'text-green-600':''}" style="${pct!==100?'color:var(--text-secondary)':''}">${pct}%</span></div>`;}).join('');}
+
+  // Quick Actions
+  document.getElementById('quickActions').innerHTML=`
+    <div class="bg-white rounded-xl shadow-sm border p-5" style="border-color:var(--border-warm)">
+      <h3 class="font-semibold text-sm section-title mb-4" style="color:var(--text-primary)">Quick Actions</h3>
+      <div class="space-y-2">
+        <button onclick="switchView('applications');setTimeout(function(){var b=document.getElementById('addApplicantBtn');if(b)b.click()},100)" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-mc-blue/5 transition" style="color:var(--text-primary)">
+          <span class="w-8 h-8 rounded-lg bg-mc-blue/10 flex items-center justify-center"><svg class="w-4 h-4 text-mc-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg></span>
+          Add Applicant</button>
+        <button onclick="switchView('thursday')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-mc-blue/5 transition" style="color:var(--text-primary)">
+          <span class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center"><svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></span>
+          Thursday Schedule</button>
+        <button onclick="if(typeof exportCSV==='function')exportCSV()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-mc-blue/5 transition" style="color:var(--text-primary)">
+          <span class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center"><svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></span>
+          Export Data</button>
+      </div>
+    </div>`;
+
+  // At a Glance
+  const obTotal=am.length;
+  const obComplete=am.filter(a=>obPct(a)===100).length;
+  const obPctVal=obTotal?Math.round(obComplete/obTotal*100):0;
+  const scheduled=allApplicants.filter(a=>a.interview_scheduled&&!a.interviewed).length;
+  const pendingReview=allApplicants.filter(a=>(a.decision||'Pending')==='Pending'&&a.interviewed).length;
+  document.getElementById('atAGlance').innerHTML=`
+    <div class="bg-white rounded-xl shadow-sm border p-5" style="border-color:var(--border-warm)">
+      <h3 class="font-semibold text-sm section-title mb-4" style="color:var(--text-primary)">At a Glance</h3>
+      <div class="flex items-center gap-4">
+        <div class="relative w-16 h-16 flex-shrink-0">
+          <div class="w-16 h-16 rounded-full" style="background:conic-gradient(var(--mc-blue) ${obPctVal*3.6}deg,#eae7e0 0deg)"></div>
+          <div class="absolute inset-1 bg-white rounded-full flex items-center justify-center">
+            <span class="text-sm font-display" style="color:var(--text-primary)">${obPctVal}%</span>
+          </div>
+        </div>
+        <div class="space-y-1.5 text-sm">
+          <p style="color:var(--text-secondary)"><span class="font-semibold" style="color:var(--text-primary)">${obComplete}/${obTotal}</span> onboarded</p>
+          <p style="color:var(--text-secondary)"><span class="font-semibold" style="color:var(--text-primary)">${scheduled}</span> interviews upcoming</p>
+          <p style="color:var(--text-secondary)"><span class="font-semibold" style="color:var(--text-primary)">${pendingReview}</span> pending review</p>
+        </div>
+      </div>
+    </div>`;
+
+  // Recent Activity
+  const recent=[...allApplicants].sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at)).slice(0,8);
+  if(recent.length){
+    document.getElementById('recentActivity').innerHTML=`
+    <div class="bg-white rounded-xl shadow-sm border p-6" style="border-color:var(--border-warm)">
+      <h3 class="font-semibold section-title mb-4" style="color:var(--text-primary)">Recent Activity</h3>
+      <div class="space-y-3">
+        ${recent.map(a=>{
+          const initials=((a.first_name||'')[0]||'')+((a.last_name||'')[0]||'');
+          const ts=a.updated_at||a.created_at;
+          const editor=a.last_edited_by||'';
+          return`<div class="flex items-center gap-3 py-1.5">
+            <div class="w-8 h-8 rounded-full bg-mc-blue/10 flex items-center justify-center text-xs font-semibold text-mc-blue flex-shrink-0">${initials}</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate" style="color:var(--text-primary)">${a.first_name} ${a.last_name}</p>
+              <p class="text-xs" style="color:var(--text-secondary)">${editor?'Updated by '+editor:'Added'}</p>
+            </div>
+            ${statusBadge(a.decision||'Pending')}
+            <span class="text-xs flex-shrink-0" style="color:var(--text-secondary)">${timeAgo(ts)}</span>
+          </div>`;}).join('')}
+      </div>
+    </div>`;
+  }else{document.getElementById('recentActivity').innerHTML='';}
 }
 
 // APPLICATIONS (sortable + extra columns)
@@ -767,10 +904,10 @@ function renderMemberSummary(){
     const ip2=arr.filter(a=>{const p=obPct(a);return p>0&&p<100;}).length;
     const ns2=arr.filter(a=>obPct(a)===0).length;
     const pct=arr.length?Math.round(fo/arr.length*100):0;
-    return '<div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5">'
+    return '<div class="card bg-white rounded-xl shadow-sm border border-warm p-5">'
       +'<div class="flex items-center justify-between mb-3">'
       +'<div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full '+tc[0]+'"></div><h3 class="font-bold text-slate-800">'+t+'</h3></div>'
-      +'<span class="text-2xl font-bold text-slate-800">'+arr.length+'</span>'
+      +'<span class="text-2xl font-display text-slate-800">'+arr.length+'</span>'
       +'</div>'
       +'<div class="space-y-2 text-sm text-slate-600">'
       +'<div class="flex justify-between"><span>Fully onboarded</span><span class="font-medium text-green-600">'+fo+'</span></div>'
@@ -806,36 +943,36 @@ function renderMemberSummary(){
 
   document.getElementById('memberSummaryContent').innerHTML=`
     <div class="grid grid-cols-4 gap-4 mb-6">
-      <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5 text-center">
+      <div class="card bg-white rounded-xl shadow-sm border border-warm p-5 text-center">
         <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Members</p>
-        <p class="text-4xl font-bold text-mc-blue mt-2">${total}</p>
+        <p class="text-4xl font-display text-mc-blue mt-2">${total}</p>
       </div>
-      <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5 text-center">
+      <div class="card bg-white rounded-xl shadow-sm border border-warm p-5 text-center">
         <p class="text-xs font-medium text-green-600 uppercase tracking-wide">Fully Onboarded</p>
-        <p class="text-4xl font-bold text-green-600 mt-2">${fullyOnboarded}</p>
+        <p class="text-4xl font-display text-green-600 mt-2">${fullyOnboarded}</p>
         <p class="text-xs text-slate-400 mt-1">${total?Math.round(fullyOnboarded/total*100):0}% complete</p>
       </div>
-      <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5 text-center">
+      <div class="card bg-white rounded-xl shadow-sm border border-warm p-5 text-center">
         <p class="text-xs font-medium text-amber-600 uppercase tracking-wide">In Progress</p>
-        <p class="text-4xl font-bold text-amber-600 mt-2">${inProgress}</p>
+        <p class="text-4xl font-display text-amber-600 mt-2">${inProgress}</p>
       </div>
-      <div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5 text-center">
+      <div class="card bg-white rounded-xl shadow-sm border border-warm p-5 text-center">
         <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Not Started</p>
-        <p class="text-4xl font-bold text-slate-400 mt-2">${notStarted}</p>
+        <p class="text-4xl font-display text-slate-400 mt-2">${notStarted}</p>
       </div>
     </div>
     <div class="grid grid-cols-3 gap-5 mb-6">${tierCardsHtml}</div>
     <div class="grid grid-cols-2 gap-5 mb-6">
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <h3 class="font-semibold text-slate-700 mb-4">Onboarding Step Completion</h3>
+      <div class="bg-white rounded-xl shadow-sm border border-warm p-5">
+        <h3 class="font-semibold section-title text-slate-700 mb-4">Onboarding Step Completion</h3>
         <div class="space-y-3">${stepsHtml}</div>
       </div>
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <h3 class="font-semibold text-slate-700 mb-4">Members by City</h3>
+      <div class="bg-white rounded-xl shadow-sm border border-warm p-5">
+        <h3 class="font-semibold section-title text-slate-700 mb-4">Members by City</h3>
         ${citiesHtml}
       </div>
     </div>
-    ${interestsHtml?`<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5"><h3 class="font-semibold text-slate-700 mb-4">Top Interest Areas</h3><div class="flex flex-wrap gap-2">${interestsHtml}</div></div>`:''}
+    ${interestsHtml?`<div class="bg-white rounded-xl shadow-sm border border-warm p-5"><h3 class="font-semibold section-title text-slate-700 mb-4">Top Interest Areas</h3><div class="flex flex-wrap gap-2">${interestsHtml}</div></div>`:''}
   `;
 }
 
@@ -935,7 +1072,7 @@ function renderOnboarding(){
   // Collect all unique steps across filtered members
   const allStepKeys=[];const allStepMap={};
   m.forEach(a=>{(ONBOARDING_STEPS[a.tier]||[]).forEach(s=>{if(!allStepMap[s.key]){allStepMap[s.key]=s;allStepKeys.push(s.key);}});});
-  let h='<table class="w-full text-sm bg-white rounded-xl shadow-sm border border-slate-200"><thead><tr class="bg-slate-50 border-b border-slate-200">';
+  let h='<table class="w-full text-sm bg-white rounded-xl shadow-sm border border-warm"><thead><tr class="bg-mc-warm-light border-b" style="border-color:var(--border-warm)">';
   h+='<th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'name\')">Member'+obSortArrow('name')+'</th>';
   h+='<th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'email\')">Email'+obSortArrow('email')+'</th>';
   h+='<th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'tier\')">Tier'+obSortArrow('tier')+'</th>';
@@ -962,7 +1099,7 @@ function renderOnboarding(){
           h+='<td class="px-2 py-3 text-center"><input type="checkbox" '+(ok?'checked':'')+' onchange="updateField(\''+a.id+"','"+s.key+"',this.checked)\" class=\"w-4 h-4 cursor-pointer\"></td>";
         } else {
           const val=a[s.key],ok=val&&val!=='Pending Recipient';
-          h+='<td class="px-2 py-3 text-center"><input type="date" value="'+(ok?val:'')+'" onchange="updateField(\''+a.id+"','"+s.key+"',this.value)\" class=\"px-1 py-0.5 border border-slate-200 rounded text-xs w-28 "+(ok?'bg-green-50 text-green-700':'')+'"></td>';
+          h+='<td class="px-2 py-3 text-center"><input type="date" value="'+(ok?val:'')+'" onchange="updateField(\''+a.id+"','"+s.key+"',this.value)\" class=\"px-1 py-0.5 border border-warm rounded text-xs w-28 "+(ok?'bg-green-50 text-green-700':'')+'"></td>';
         }
       });
       h+='</tr>';
@@ -982,10 +1119,10 @@ function editableCell(id,field,value,type,isDetail){
     return '<div class="group relative" id="'+eid+'" onclick="this.querySelector(\'textarea\').classList.remove(\'hidden\');this.querySelector(\'.edval\').classList.add(\'hidden\');this.querySelector(\'textarea\').focus()"><p class="text-sm text-slate-700 mt-0.5 whitespace-pre-wrap edval cursor-pointer hover:bg-blue-50 rounded px-1 -mx-1 min-h-[24px]">'+display+'</p><textarea class="hidden w-full px-2 py-1 border border-blue-300 rounded text-sm mt-0.5 focus:outline-none focus:ring-2 focus:ring-blue-300" rows="3" onblur="'+fn+"('"+id+"','"+field+"',this.value);this.classList.add('hidden');this.parentElement.querySelector('.edval').classList.remove('hidden')\">"+safeVal+'</textarea></div>';
   }
   if(type==='select-tier'){
-    return '<select class="text-sm bg-transparent border border-slate-200 rounded px-2 py-1 hover:border-blue-300 focus:ring-2 focus:ring-blue-300 focus:outline-none cursor-pointer" onchange="'+fn+"('"+id+"','"+field+"',this.value)\"><option value=\"Ponyride\""+(value==='Ponyride'?' selected':'')+">Ponyride</option><option value=\"Vanguard\""+(value==='Vanguard'?' selected':'')+">Vanguard</option><option value=\"Originator\""+(value==='Originator'?' selected':'')+'>Originator</option></select>';
+    return '<select class="text-sm bg-transparent border border-warm rounded px-2 py-1 hover:border-blue-300 focus:ring-2 focus:ring-blue-300 focus:outline-none cursor-pointer" onchange="'+fn+"('"+id+"','"+field+"',this.value)\"><option value=\"Ponyride\""+(value==='Ponyride'?' selected':'')+">Ponyride</option><option value=\"Vanguard\""+(value==='Vanguard'?' selected':'')+">Vanguard</option><option value=\"Originator\""+(value==='Originator'?' selected':'')+'>Originator</option></select>';
   }
   if(type==='date'){
-    return '<input type="date" value="'+safeVal+'" onchange="'+fn+"('"+id+"','"+field+"',this.value)\" class=\"text-sm border border-slate-200 rounded px-2 py-1 hover:border-blue-300 focus:ring-2 focus:ring-blue-300 focus:outline-none\">";
+    return '<input type="date" value="'+safeVal+'" onchange="'+fn+"('"+id+"','"+field+"',this.value)\" class=\"text-sm border border-warm rounded px-2 py-1 hover:border-blue-300 focus:ring-2 focus:ring-blue-300 focus:outline-none\">";
   }
   return '<div class="group" id="'+eid+'" onclick="var inp=this.querySelector(\'input\');inp.classList.remove(\'hidden\');this.querySelector(\'.edval\').classList.add(\'hidden\');inp.focus()"><p class="text-sm text-slate-700 mt-0.5 edval cursor-pointer hover:bg-blue-50 rounded px-1 -mx-1 min-h-[24px]">'+display+'</p><input type="text" value="'+safeVal+'" class="hidden w-full px-2 py-1 border border-blue-300 rounded text-sm mt-0.5 focus:outline-none focus:ring-2 focus:ring-blue-300" onblur="'+fn+"('"+id+"','"+field+"',this.value)\" onkeydown=\"if(event.key==='Enter'){this.blur()}\"></div>";
 }
@@ -1008,9 +1145,9 @@ function openDetail(id){
       <h4 class="font-semibold text-green-800 mb-3">Onboarding Checklist</h4>
       ${steps.map(s=>{
         if(s.isBool)return`<label class="flex items-center gap-3 py-2 cursor-pointer"><input type="checkbox" ${a[s.key]?'checked':''} onchange="updateField('${a.id}','${s.key}',this.checked)" class="w-4 h-4"><span class="text-sm text-slate-700">${s.label}</span>${a[s.key]?'<span class="text-xs text-green-600 ml-auto">Complete</span>':''}</label>`;
-        return`<div class="flex items-center gap-3 py-2"><span class="text-sm text-slate-700 w-36">${s.label}</span><input type="date" value="${a[s.key]&&a[s.key]!=='Pending Recipient'?a[s.key]:''}" onchange="updateField('${a.id}','${s.key}',this.value)" class="px-2 py-1 border border-slate-200 rounded text-sm flex-1">${a[s.key]==='Pending Recipient'?'<span class="text-xs text-amber-600">Pending</span>':''}</div>`;
+        return`<div class="flex items-center gap-3 py-2"><span class="text-sm text-slate-700 w-36">${s.label}</span><input type="date" value="${a[s.key]&&a[s.key]!=='Pending Recipient'?a[s.key]:''}" onchange="updateField('${a.id}','${s.key}',this.value)" class="px-2 py-1 border border-warm rounded text-sm flex-1">${a[s.key]==='Pending Recipient'?'<span class="text-xs text-amber-600">Pending</span>':''}</div>`;
       }).join('')}
-      <div class="mt-3"><label class="text-xs text-slate-500">MyClubHub Member ID</label><input type="text" value="${a.myclubhub_member_id||''}" onchange="updateField('${a.id}','myclubhub_member_id',this.value)" class="w-full px-2 py-1 border border-slate-200 rounded text-sm mt-1"></div>
+      <div class="mt-3"><label class="text-xs text-slate-500">MyClubHub Member ID</label><input type="text" value="${a.myclubhub_member_id||''}" onchange="updateField('${a.id}','myclubhub_member_id',this.value)" class="w-full px-2 py-1 border border-warm rounded text-sm mt-1"></div>
     </div>`;
   }
 
@@ -1062,8 +1199,8 @@ function openDetail(id){
   else{h+='<span class="text-sm text-slate-400 italic">No interview scheduled</span>';}
   h+='</div>';
   h+='<div class="flex items-center gap-2">';
-  h+='<input type="date" value="'+iSchedDate+'" onchange="setInterviewDate(this)" data-aid="'+a.id+'" class="text-xs border border-slate-200 rounded px-2 py-1.5 bg-white cursor-pointer">';
-  h+='<select onchange="setInterviewTime(this)" data-aid="'+a.id+'" class="text-xs border border-slate-200 rounded px-2 py-1.5 bg-white cursor-pointer">';
+  h+='<input type="date" value="'+iSchedDate+'" onchange="setInterviewDate(this)" data-aid="'+a.id+'" class="text-xs border border-warm rounded px-2 py-1.5 bg-white cursor-pointer">';
+  h+='<select onchange="setInterviewTime(this)" data-aid="'+a.id+'" class="text-xs border border-warm rounded px-2 py-1.5 bg-white cursor-pointer">';
   h+='<option value="">Time...</option>';
   var timeOpts=['08:00','08:15','08:30','08:45','09:00','09:15','09:30','09:45','10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45','13:00','13:15','13:30','13:45','14:00','14:15','14:30','14:45','15:00','15:15','15:30','15:45','16:00','16:15','16:30','16:45','17:00','17:15','17:30','17:45','18:00'];
   for(var ti=0;ti<timeOpts.length;ti++){h+='<option value="'+timeOpts[ti]+'"'+(iSchedTime===timeOpts[ti]?' selected':'')+'>'+fmtTimeOption(timeOpts[ti])+'</option>';}
@@ -1073,18 +1210,18 @@ function openDetail(id){
   h+='<label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" '+(a.interviewed?'checked':'')+' onchange="updateField(\''+a.id+"','interviewed',this.checked)\" class=\"w-4 h-4\"><span class=\"text-sm font-medium text-slate-700\">Interviewed</span></label>";
   h+='<div class="mb-3"><p class="text-xs text-slate-500 mb-1">Score</p><div class="flex gap-1">'+starsHtml(a.interview_score||0,a.id)+'</div></div>';
   var intNotes=(a.interview_notes||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  h+='<div><p class="text-xs text-slate-500 mb-1">Interview Notes</p><textarea onchange="updateField(\''+a.id+"','interview_notes',this.value)\" class=\"w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300\" rows=\"3\" placeholder=\"Notes from the interview...\">"+intNotes+'</textarea></div>';
+  h+='<div><p class="text-xs text-slate-500 mb-1">Interview Notes</p><textarea onchange="updateField(\''+a.id+"','interview_notes',this.value)\" class=\"w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300\" rows=\"3\" placeholder=\"Notes from the interview...\">"+intNotes+'</textarea></div>';
   h+='</div>';
   // Review Notes
   var revNotes=(a.review_notes||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  h+='<div class="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200"><h4 class="font-semibold text-amber-800 mb-2">Review Notes</h4><p class="text-xs text-slate-500 mb-1">Shared notes visible to all reviewers</p><textarea onchange="updateField(\''+a.id+"','review_notes',this.value)\" class=\"w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300\" rows=\"3\" placeholder=\"Application review notes, observations, concerns...\">"+revNotes+'</textarea>';
+  h+='<div class="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200"><h4 class="font-semibold text-amber-800 mb-2">Review Notes</h4><p class="text-xs text-slate-500 mb-1">Shared notes visible to all reviewers</p><textarea onchange="updateField(\''+a.id+"','review_notes',this.value)\" class=\"w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300\" rows=\"3\" placeholder=\"Application review notes, observations, concerns...\">"+revNotes+'</textarea>';
   // Interest indicator
   var interest=a.reviewer_interest||'';
   h+='<div class="mt-3 pt-3 border-t border-amber-200"><p class="text-xs text-slate-500 mb-2">Interested?</p>';
   h+='<div class="flex items-center gap-3">';
   var aid=a.id;
-  var yesBtn='<button onclick="setInterest(this)" data-aid="'+aid+'" data-val="yes" class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition '+(interest==='yes'?'bg-green-600 text-white shadow-sm':'bg-white border border-slate-200 text-slate-500 hover:bg-green-50 hover:text-green-700 hover:border-green-300')+'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21H6a2 2 0 01-2-2v-7a2 2 0 012-2h1.5l2.5-5.5a1 1 0 011.9.3L11 10z"/></svg>Yes</button>';
-  var noBtn='<button onclick="setInterest(this)" data-aid="'+aid+'" data-val="no" class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition '+(interest==='no'?'bg-red-600 text-white shadow-sm':'bg-white border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-700 hover:border-red-300')+'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3H18a2 2 0 012 2v7a2 2 0 01-2 2h-1.5l-2.5 5.5a1 1 0 01-1.9-.3L13 14z"/></svg>No</button>';
+  var yesBtn='<button onclick="setInterest(this)" data-aid="'+aid+'" data-val="yes" class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition '+(interest==='yes'?'bg-green-600 text-white shadow-sm':'bg-white border border-warm text-slate-500 hover:bg-green-50 hover:text-green-700 hover:border-green-300')+'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21H6a2 2 0 01-2-2v-7a2 2 0 012-2h1.5l2.5-5.5a1 1 0 011.9.3L11 10z"/></svg>Yes</button>';
+  var noBtn='<button onclick="setInterest(this)" data-aid="'+aid+'" data-val="no" class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition '+(interest==='no'?'bg-red-600 text-white shadow-sm':'bg-white border border-warm text-slate-500 hover:bg-red-50 hover:text-red-700 hover:border-red-300')+'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3H18a2 2 0 012 2v7a2 2 0 01-2 2h-1.5l-2.5 5.5a1 1 0 01-1.9-.3L13 14z"/></svg>No</button>';
   h+=yesBtn+noBtn;
   if(interest){h+='<button onclick="setInterest(this)" data-aid="'+aid+'" data-val="" class="text-xs text-slate-400 hover:text-slate-600 ml-1">Clear</button>';}
   h+='</div></div>';
@@ -1114,7 +1251,7 @@ function openDetail(id){
   h+='</div>';
   // Internal Notes
   var intlNotes=(a.notes||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  h+='<div class="mt-4"><label class="text-xs text-slate-400">Internal Notes</label><textarea onchange="updateField(\''+a.id+"','notes',this.value)\" class=\"w-full px-3 py-2 border border-slate-200 rounded-lg text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-mc-blue\" rows=\"2\">"+intlNotes+'</textarea></div>';
+  h+='<div class="mt-4"><label class="text-xs text-slate-400">Internal Notes</label><textarea onchange="updateField(\''+a.id+"','notes',this.value)\" class=\"w-full px-3 py-2 border border-warm rounded-lg text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-mc-blue\" rows=\"2\">"+intlNotes+'</textarea></div>';
   // Decision Buttons
   h+='<div class="mt-6 grid grid-cols-5 gap-2">';
   h+='<button onclick="setDecision(\''+a.id+"','Accepted')\" class=\"py-2.5 rounded-lg text-sm font-semibold "+(a.decision==='Accepted'?'bg-green-600 text-white':'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100')+'">&check; Accept</button>';
@@ -1502,7 +1639,7 @@ function renderKeyDates(){
     const dotColor=isPast?'bg-green-500':isToday?'bg-mc-gold':'bg-slate-300';
     h+='<div class="relative flex items-start gap-6 mb-8">';
     h+='<div class="w-12 flex-shrink-0 flex items-center justify-center"><div class="w-3.5 h-3.5 rounded-full '+dotColor+' border-2 border-white shadow z-10"></div></div>';
-    h+='<div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex-1 '+(isPast?'opacity-60':'')+'">';
+    h+='<div class="card bg-white rounded-xl shadow-sm border border-warm p-5 flex-1 '+(isPast?'opacity-60':'')+'">';
     h+='<div class="flex items-center justify-between mb-2">';
     h+='<span class="text-xs font-semibold '+(isPast?'text-green-600':isToday?'text-mc-gold':'text-mc-blue')+' uppercase tracking-wide cursor-pointer" onclick="launchEditCell(\'launch_dates\','+d.id+',\'date\',\''+d.date+'\',this,\'date\')">'+(d.date?fmtDate(d.date):'Click to set date')+'</span>';
     h+='<div class="flex items-center gap-2"><span class="text-xs text-slate-400 cursor-pointer" onclick="launchEditCell(\'launch_dates\','+d.id+',\'owner\',\''+esc(d.owner)+'\',this,\'text\')">'+esc(d.owner)+'</span>';
@@ -1523,7 +1660,7 @@ function renderOpenQuestions(){
   h+='<div class="grid grid-cols-1 md:grid-cols-2 gap-5">';
   launchQuestions.forEach(q=>{
     const tc=topicColors[q.topic]||'bg-slate-50 border-slate-200 text-slate-700';
-    h+='<div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-5">';
+    h+='<div class="card bg-white rounded-xl shadow-sm border border-warm p-5">';
     h+='<div class="flex items-center gap-2 mb-3">';
     h+='<span class="px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer '+tc+'" onclick="launchEditCell(\'launch_questions\','+q.id+',\'topic\',\''+esc(q.topic)+'\',this,\'text\')">'+esc(q.topic)+'</span>';
     h+='<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 cursor-pointer" onclick="launchEditCell(\'launch_questions\','+q.id+',\'status\',\''+esc(q.status)+'\',this,\'select-qstatus\')">'+esc(q.status)+'</span>';
@@ -1544,8 +1681,8 @@ function renderMemberAccess(){
   const tierColors={'Originator':'bg-emerald-50 text-emerald-700 border-emerald-200','Vanguard':'bg-pink-50 text-pink-700 border-pink-200','Pony Ride':'bg-blue-50 text-blue-700 border-blue-200','Program Partner':'bg-purple-50 text-purple-700 border-purple-200','External Rental':'bg-slate-50 text-slate-700 border-slate-200','University Student':'bg-amber-50 text-amber-700 border-amber-200'};
   const container=document.getElementById('memberAccessContent');
   let h='<div class="flex justify-end mb-4"><button onclick="addLaunchRow(\'launch_access\',{tier:\'New Tier\',age:\'\',cost:\'\',hours:\'\',bg_check:\'\',safety:\'\',booking:\'\',equipment:\'\',notes:\'\'})" class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition">+ Add Tier</button></div>';
-  h+='<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"><div class="overflow-x-auto">';
-  h+='<table class="w-full text-sm"><thead class="bg-slate-50 border-b border-slate-200"><tr>';
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm overflow-hidden"><div class="overflow-x-auto">';
+  h+='<table class="w-full text-sm"><thead class="bg-mc-warm-light border-b border-slate-200"><tr>';
   h+='<th class="text-left px-4 py-3 font-semibold text-slate-600">Tier</th>';
   h+='<th class="text-left px-4 py-3 font-semibold text-slate-600">Age</th>';
   h+='<th class="text-left px-4 py-3 font-semibold text-slate-600">Cost</th>';
@@ -1585,7 +1722,7 @@ function renderRooms(){
   let h='<div class="flex justify-end mb-4"><button onclick="addLaunchRow(\'launch_rooms\',{number:\'\',name:\'New Room\',description:\'\'})" class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition">+ Add Room</button></div>';
   h+='<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">';
   launchRooms.forEach(r=>{
-    h+='<div class="card bg-white rounded-xl shadow-sm border border-slate-200 p-4">';
+    h+='<div class="card bg-white rounded-xl shadow-sm border border-warm p-4">';
     h+='<div class="flex items-start gap-3">';
     h+='<div class="w-10 h-10 rounded-lg bg-mc-blue flex items-center justify-center text-white text-sm font-bold flex-shrink-0 cursor-pointer" onclick="launchEditCell(\'launch_rooms\','+r.id+',\'number\',\''+esc(r.number)+'\',this,\'text\')">'+esc(r.number)+'</div>';
     h+='<div class="flex-1 min-w-0">';
@@ -1688,13 +1825,13 @@ function renderThursInterviews(){
   h+='</div>';
 
   if(scheduled.length===0){
-    h+='<div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400"><p>No interviews scheduled for this date.</p><p class="text-xs mt-1">Schedule interviews from the Applications tab.</p></div>';
+    h+='<div class="bg-white rounded-xl border border-warm p-8 text-center text-slate-400"><p>No interviews scheduled for this date.</p><p class="text-xs mt-1">Schedule interviews from the Applications tab.</p></div>';
     container.innerHTML=h;return;
   }
 
-  h+='<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">';
+  h+='<div class="bg-white rounded-xl border border-warm overflow-hidden">';
   h+='<div class="overflow-x-auto"><table class="w-full text-sm">';
-  h+='<thead class="bg-slate-50 border-b border-slate-200"><tr>';
+  h+='<thead class="bg-mc-warm-light border-b border-slate-200"><tr>';
   h+='<th class="text-left px-4 py-3 font-medium text-slate-600">Time</th>';
   h+='<th class="text-left px-4 py-3 font-medium text-slate-600">Applicant</th>';
   h+='<th class="text-left px-4 py-3 font-medium text-slate-600">Tier</th>';
@@ -1719,8 +1856,8 @@ function renderThursInterviews(){
     h+='<td class="px-4 py-3 font-medium text-slate-800">'+timeStr+'</td>';
     h+='<td class="px-4 py-3"><span class="text-blue-600 cursor-pointer hover:underline font-medium" onclick="openRubric(\''+a.id+'\')">'+esc(a.first_name)+' '+esc(a.last_name)+'</span></td>';
     h+='<td class="px-4 py-3">'+tierBadge(a.tier)+'</td>';
-    h+='<td class="px-4 py-3"><input type="text" value="'+esc(sc.room||'')+'" data-aid="'+a.id+'" data-field="room" class="thurs-field-save w-24 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none" placeholder="Room..." onblur="saveThursField(this)"></td>';
-    h+='<td class="px-4 py-3"><input type="text" value="'+esc(sc.interviewer_names||'')+'" data-aid="'+a.id+'" data-field="interviewer_names" class="thurs-field-save w-40 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none" placeholder="Names..." onblur="saveThursField(this)"></td>';
+    h+='<td class="px-4 py-3"><input type="text" value="'+esc(sc.room||'')+'" data-aid="'+a.id+'" data-field="room" class="thurs-field-save w-24 px-2 py-1 border border-warm rounded text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none" placeholder="Room..." onblur="saveThursField(this)"></td>';
+    h+='<td class="px-4 py-3"><input type="text" value="'+esc(sc.interviewer_names||'')+'" data-aid="'+a.id+'" data-field="interviewer_names" class="thurs-field-save w-40 px-2 py-1 border border-warm rounded text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none" placeholder="Names..." onblur="saveThursField(this)"></td>';
     h+='<td class="px-4 py-3">'+(sc.decision?'<span class="font-semibold">'+total+'/24</span>':'<span class="text-slate-300">\u2014</span>')+'</td>';
     h+='<td class="px-4 py-3">'+(sc.decision?'<span class="px-2 py-0.5 rounded-full text-xs font-medium '+decClass+'">'+esc(sc.decision)+'</span>':'<span class="text-slate-300">Not scored</span>')+'</td>';
     h+='<td class="px-4 py-3"><button class="text-blue-600 hover:text-blue-800 text-xs font-medium" onclick="openRubric(\''+a.id+'\')">Score</button></td>';
@@ -1815,7 +1952,7 @@ function openRubric(applicantId){
     b+='<div class="flex gap-1">';
     for(var si2=0;si2<=4;si2++){
       var active=si2===val;
-      b+='<button onclick="setRubricScore(\''+applicantId+'\',\''+sig.key+'\','+si2+')" class="rubric-score-btn w-9 h-8 rounded text-xs font-semibold '+(active?'bg-mc-blue text-white':'bg-white border border-slate-200 text-slate-500 hover:border-mc-blue hover:text-mc-blue')+' transition">'+si2+'</button>';
+      b+='<button onclick="setRubricScore(\''+applicantId+'\',\''+sig.key+'\','+si2+')" class="rubric-score-btn w-9 h-8 rounded text-xs font-semibold '+(active?'bg-mc-blue text-white':'bg-white border border-warm text-slate-500 hover:border-mc-blue hover:text-mc-blue')+' transition">'+si2+'</button>';
     }
     b+='</div>';
     b+='<p class="text-xs text-slate-400 mt-1">4: '+esc(sig.desc4)+' \u00b7 2: '+esc(sig.desc2)+' \u00b7 0: '+esc(sig.desc0)+'</p></div>';
@@ -1830,7 +1967,7 @@ function openRubric(applicantId){
   for(var di=0;di<decisions.length;di++){
     var dd=decisions[di];
     var activeD=sc.decision===dd;
-    b+='<button onclick="setRubricDecision(\''+applicantId+'\',\''+dd.replace(/'/g,"\\'")+'\')" class="rubric-decision-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition '+(activeD?decColors[di]+' text-white shadow':'bg-white border border-slate-200 text-slate-600 hover:border-slate-400')+'">'+dd+'</button>';
+    b+='<button onclick="setRubricDecision(\''+applicantId+'\',\''+dd.replace(/'/g,"\\'")+'\')" class="rubric-decision-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition '+(activeD?decColors[di]+' text-white shadow':'bg-white border border-warm text-slate-600 hover:border-slate-400')+'">'+dd+'</button>';
   }
   b+='</div>';
   b+='<p class="text-xs text-slate-500 mt-2">Priority Admit: 20-24 \u00b7 Admit: 15-19 \u00b7 Waitlist: 10-14 \u00b7 Decline: 0-9</p>';
@@ -1844,9 +1981,9 @@ function openRubric(applicantId){
 
   // Strengths / Concerns / Notes
   b+='<div class="space-y-3">';
-  b+='<div><label class="text-xs font-medium text-slate-600">Strengths</label><textarea id="rubricStrengths" class="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none" rows="2" placeholder="Key strengths..." onblur="saveRubricText(\''+applicantId+'\',\'strengths\',this.value)">'+esc(sc.strengths||'')+'</textarea></div>';
-  b+='<div><label class="text-xs font-medium text-slate-600">Concerns</label><textarea id="rubricConcerns" class="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none" rows="2" placeholder="Any concerns..." onblur="saveRubricText(\''+applicantId+'\',\'concerns\',this.value)">'+esc(sc.concerns||'')+'</textarea></div>';
-  b+='<div><label class="text-xs font-medium text-slate-600">Key Notes</label><textarea id="rubricKeyNotes" class="w-full mt-1 px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none" rows="2" placeholder="Additional notes..." onblur="saveRubricText(\''+applicantId+'\',\'key_notes\',this.value)">'+esc(sc.key_notes||'')+'</textarea></div>';
+  b+='<div><label class="text-xs font-medium text-slate-600">Strengths</label><textarea id="rubricStrengths" class="w-full mt-1 px-3 py-2 border border-warm rounded-lg text-sm resize-none" rows="2" placeholder="Key strengths..." onblur="saveRubricText(\''+applicantId+'\',\'strengths\',this.value)">'+esc(sc.strengths||'')+'</textarea></div>';
+  b+='<div><label class="text-xs font-medium text-slate-600">Concerns</label><textarea id="rubricConcerns" class="w-full mt-1 px-3 py-2 border border-warm rounded-lg text-sm resize-none" rows="2" placeholder="Any concerns..." onblur="saveRubricText(\''+applicantId+'\',\'concerns\',this.value)">'+esc(sc.concerns||'')+'</textarea></div>';
+  b+='<div><label class="text-xs font-medium text-slate-600">Key Notes</label><textarea id="rubricKeyNotes" class="w-full mt-1 px-3 py-2 border border-warm rounded-lg text-sm resize-none" rows="2" placeholder="Additional notes..." onblur="saveRubricText(\''+applicantId+'\',\'key_notes\',this.value)">'+esc(sc.key_notes||'')+'</textarea></div>';
   b+='</div>';
 
   // Suggested Pathways
@@ -1977,10 +2114,10 @@ function renderThursFloorplan(){
 
   var h='';
   // Image upload area
-  h+='<div class="bg-white rounded-xl border border-slate-200 p-4 mb-4">';
+  h+='<div class="bg-white rounded-xl border border-warm p-4 mb-4">';
   h+='<h4 class="text-sm font-semibold text-slate-700 mb-2">Floorplan Image</h4>';
   if(thursdayFloorplanImage){
-    h+='<div class="relative mb-2"><img src="'+thursdayFloorplanImage+'" class="max-w-full rounded-lg border border-slate-200" style="max-height:400px">';
+    h+='<div class="relative mb-2"><img src="'+thursdayFloorplanImage+'" class="max-w-full rounded-lg border border-warm" style="max-height:400px">';
     h+='<button id="removeFloorplanImg" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600 shadow text-sm font-bold">\u00d7</button>';
     h+='</div>';
   }else{
@@ -1992,14 +2129,14 @@ function renderThursFloorplan(){
   h+='</div>';
 
   // Add room form — manual entry
-  h+='<div class="bg-white rounded-xl border border-slate-200 p-4 mb-4">';
+  h+='<div class="bg-white rounded-xl border border-warm p-4 mb-4">';
   h+='<h4 class="text-sm font-semibold text-slate-700 mb-2">Add Room</h4>';
   h+='<div class="flex gap-2 items-end flex-wrap">';
-  h+='<div><label class="text-xs text-slate-500">Room Name *</label><input id="fpRoomName" type="text" class="block w-40 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="e.g. Room 101"></div>';
-  h+='<div><label class="text-xs text-slate-500">Type</label><select id="fpRoomType" class="block w-32 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5"><option>interview</option><option>orientation</option><option>open-house</option><option>storage</option><option>staff</option></select></div>';
-  h+='<div><label class="text-xs text-slate-500">Time Slot</label><input id="fpRoomTime" type="text" value="4:00 - 6:00 PM" class="block w-36 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5"></div>';
-  h+='<div><label class="text-xs text-slate-500">Capacity</label><input id="fpRoomCap" type="number" value="0" class="block w-20 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5"></div>';
-  h+='<div><label class="text-xs text-slate-500">Assigned To</label><input id="fpRoomAssigned" type="text" class="block w-36 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="Staff..."></div>';
+  h+='<div><label class="text-xs text-slate-500">Room Name *</label><input id="fpRoomName" type="text" class="block w-40 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="e.g. Room 101"></div>';
+  h+='<div><label class="text-xs text-slate-500">Type</label><select id="fpRoomType" class="block w-32 px-2 py-1.5 border border-warm rounded text-sm mt-0.5"><option>interview</option><option>orientation</option><option>open-house</option><option>storage</option><option>staff</option></select></div>';
+  h+='<div><label class="text-xs text-slate-500">Time Slot</label><input id="fpRoomTime" type="text" value="4:00 - 6:00 PM" class="block w-36 px-2 py-1.5 border border-warm rounded text-sm mt-0.5"></div>';
+  h+='<div><label class="text-xs text-slate-500">Capacity</label><input id="fpRoomCap" type="number" value="0" class="block w-20 px-2 py-1.5 border border-warm rounded text-sm mt-0.5"></div>';
+  h+='<div><label class="text-xs text-slate-500">Assigned To</label><input id="fpRoomAssigned" type="text" class="block w-36 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="Staff..."></div>';
   h+='<button id="fpAddRoomBtn" class="bg-mc-blue text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-opacity-90">+ Add</button>';
   h+='</div></div>';
 
@@ -2010,19 +2147,19 @@ function renderThursFloorplan(){
     h+='<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
     for(var ri=0;ri<rooms.length;ri++){
       var r=rooms[ri];
-      h+='<div class="bg-white rounded-xl border border-slate-200 p-4">';
+      h+='<div class="bg-white rounded-xl border border-warm p-4">';
       h+='<div class="flex items-center justify-between mb-2">';
       h+='<input type="text" value="'+esc(r.room_name)+'" data-rid="'+r.id+'" data-field="room_name" class="fp-field font-semibold text-slate-800 border-none focus:outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 -ml-1 w-full">';
       h+='<button data-fp-del="'+r.id+'" class="fp-del-btn text-slate-300 hover:text-red-500 flex-shrink-0 ml-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>';
       h+='</div>';
       h+='<div class="grid grid-cols-2 gap-2 text-xs">';
-      h+='<div><label class="text-slate-400">Type</label><select data-rid="'+r.id+'" data-field="room_type" class="fp-field w-full mt-0.5 px-2 py-1 border border-slate-200 rounded text-sm">';
+      h+='<div><label class="text-slate-400">Type</label><select data-rid="'+r.id+'" data-field="room_type" class="fp-field w-full mt-0.5 px-2 py-1 border border-warm rounded text-sm">';
       var rtypes=['interview','orientation','open-house','storage','staff'];
       for(var rt=0;rt<rtypes.length;rt++){h+='<option'+(r.room_type===rtypes[rt]?' selected':'')+'>'+rtypes[rt]+'</option>';}
       h+='</select></div>';
-      h+='<div><label class="text-slate-400">Capacity</label><input type="number" value="'+(r.capacity||0)+'" data-rid="'+r.id+'" data-field="capacity" class="fp-field w-full mt-0.5 px-2 py-1 border border-slate-200 rounded text-sm"></div>';
-      h+='<div class="col-span-2"><label class="text-slate-400">Assigned To</label><input type="text" value="'+esc(r.assigned_to||'')+'" data-rid="'+r.id+'" data-field="assigned_to" class="fp-field w-full mt-0.5 px-2 py-1 border border-slate-200 rounded text-sm" placeholder="Staff or activity..."></div>';
-      h+='<div class="col-span-2"><label class="text-slate-400">Notes</label><input type="text" value="'+esc(r.notes||'')+'" data-rid="'+r.id+'" data-field="notes" class="fp-field w-full mt-0.5 px-2 py-1 border border-slate-200 rounded text-sm" placeholder="Notes..."></div>';
+      h+='<div><label class="text-slate-400">Capacity</label><input type="number" value="'+(r.capacity||0)+'" data-rid="'+r.id+'" data-field="capacity" class="fp-field w-full mt-0.5 px-2 py-1 border border-warm rounded text-sm"></div>';
+      h+='<div class="col-span-2"><label class="text-slate-400">Assigned To</label><input type="text" value="'+esc(r.assigned_to||'')+'" data-rid="'+r.id+'" data-field="assigned_to" class="fp-field w-full mt-0.5 px-2 py-1 border border-warm rounded text-sm" placeholder="Staff or activity..."></div>';
+      h+='<div class="col-span-2"><label class="text-slate-400">Notes</label><input type="text" value="'+esc(r.notes||'')+'" data-rid="'+r.id+'" data-field="notes" class="fp-field w-full mt-0.5 px-2 py-1 border border-warm rounded text-sm" placeholder="Notes..."></div>';
       h+='</div></div>';
     }
     h+='</div>';
@@ -2110,19 +2247,19 @@ async function deleteFloorplanRoom(id){
 // ── STAFFING TAB ──
 function renderThursStaffing(){
   var container=document.getElementById('thursTab-staffing');if(!container)return;
-  var h='<div class="bg-white rounded-xl border border-slate-200 p-4 mb-4">';
+  var h='<div class="bg-white rounded-xl border border-warm p-4 mb-4">';
   h+='<h4 class="text-sm font-semibold text-slate-700 mb-3">Add Staff Assignment</h4>';
   h+='<div class="flex gap-2 items-end flex-wrap">';
-  h+='<div><label class="text-xs text-slate-500">Name *</label><input id="staffNameInput" type="text" class="block w-40 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="Staff name..."></div>';
-  h+='<div><label class="text-xs text-slate-500">Role</label><input id="staffRoleInput" type="text" class="block w-32 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="Role..."></div>';
-  h+='<div><label class="text-xs text-slate-500">Area</label><input id="staffAreaInput" type="text" class="block w-32 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="Area..."></div>';
-  h+='<div><label class="text-xs text-slate-500">Time</label><input id="staffTimeInput" type="text" value="4:00 PM - 6:00 PM" class="block w-40 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5"></div>';
+  h+='<div><label class="text-xs text-slate-500">Name *</label><input id="staffNameInput" type="text" class="block w-40 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="Staff name..."></div>';
+  h+='<div><label class="text-xs text-slate-500">Role</label><input id="staffRoleInput" type="text" class="block w-32 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="Role..."></div>';
+  h+='<div><label class="text-xs text-slate-500">Area</label><input id="staffAreaInput" type="text" class="block w-32 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="Area..."></div>';
+  h+='<div><label class="text-xs text-slate-500">Time</label><input id="staffTimeInput" type="text" value="4:00 PM - 6:00 PM" class="block w-40 px-2 py-1.5 border border-warm rounded text-sm mt-0.5"></div>';
   h+='<button id="staffAddBtn" class="bg-mc-blue text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-opacity-90">Add</button>';
   h+='</div></div>';
 
   if(thursdayStaffing.length>0){
-    h+='<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">';
-    h+='<table class="w-full text-sm"><thead class="bg-slate-50 border-b border-slate-200"><tr>';
+    h+='<div class="bg-white rounded-xl border border-warm overflow-hidden">';
+    h+='<table class="w-full text-sm"><thead class="bg-mc-warm-light border-b border-slate-200"><tr>';
     h+='<th class="text-left px-4 py-2 font-medium text-slate-600">Name</th>';
     h+='<th class="text-left px-4 py-2 font-medium text-slate-600">Role</th>';
     h+='<th class="text-left px-4 py-2 font-medium text-slate-600">Area</th>';
@@ -2208,7 +2345,7 @@ function renderThursMeetups(){
   h+='<div class="space-y-3">';
   for(var mi=0;mi<thursdayMeetups.length;mi++){
     var m=thursdayMeetups[mi];
-    h+='<div class="bg-white rounded-xl border border-slate-200 p-4">';
+    h+='<div class="bg-white rounded-xl border border-warm p-4">';
     h+='<div class="flex items-center gap-3">';
     h+='<div class="flex flex-col gap-1">';
     if(mi>0)h+='<button data-mu-move="'+m.id+'" data-mu-order="'+(m.sort_order-1)+'" class="mu-move-btn text-slate-300 hover:text-mc-blue"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg></button>';
@@ -2216,13 +2353,13 @@ function renderThursMeetups(){
     h+='</div>';
     h+='<div class="flex-1">';
     h+='<div class="flex items-center gap-2 mb-1">';
-    h+='<input type="text" value="'+esc(m.time_slot||'')+'" data-mid="'+m.id+'" data-field="time_slot" class="mu-field w-28 px-2 py-1 border border-slate-200 rounded text-xs" placeholder="5:00 PM">';
-    h+='<input type="text" value="'+esc(m.title)+'" data-mid="'+m.id+'" data-field="title" class="mu-field flex-1 px-2 py-1 border border-slate-200 rounded text-sm font-semibold" placeholder="Title...">';
+    h+='<input type="text" value="'+esc(m.time_slot||'')+'" data-mid="'+m.id+'" data-field="time_slot" class="mu-field w-28 px-2 py-1 border border-warm rounded text-xs" placeholder="5:00 PM">';
+    h+='<input type="text" value="'+esc(m.title)+'" data-mid="'+m.id+'" data-field="title" class="mu-field flex-1 px-2 py-1 border border-warm rounded text-sm font-semibold" placeholder="Title...">';
     h+='</div>';
     h+='<div class="flex items-center gap-2">';
-    h+='<input type="text" value="'+esc(m.leader||'')+'" data-mid="'+m.id+'" data-field="leader" class="mu-field w-32 px-2 py-1 border border-slate-200 rounded text-xs" placeholder="Leader...">';
-    h+='<input type="text" value="'+esc(m.location||'')+'" data-mid="'+m.id+'" data-field="location" class="mu-field w-32 px-2 py-1 border border-slate-200 rounded text-xs" placeholder="Location...">';
-    h+='<input type="text" value="'+esc(m.description||'')+'" data-mid="'+m.id+'" data-field="description" class="mu-field flex-1 px-2 py-1 border border-slate-200 rounded text-xs" placeholder="Description...">';
+    h+='<input type="text" value="'+esc(m.leader||'')+'" data-mid="'+m.id+'" data-field="leader" class="mu-field w-32 px-2 py-1 border border-warm rounded text-xs" placeholder="Leader...">';
+    h+='<input type="text" value="'+esc(m.location||'')+'" data-mid="'+m.id+'" data-field="location" class="mu-field w-32 px-2 py-1 border border-warm rounded text-xs" placeholder="Location...">';
+    h+='<input type="text" value="'+esc(m.description||'')+'" data-mid="'+m.id+'" data-field="description" class="mu-field flex-1 px-2 py-1 border border-warm rounded text-xs" placeholder="Description...">';
     h+='</div></div>';
     h+='<button data-mu-del="'+m.id+'" class="mu-del-btn text-slate-300 hover:text-red-500 flex-shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>';
     h+='</div></div>';
@@ -2288,18 +2425,18 @@ function renderThursSignin(){
   h+='</div>';
 
   // Manual entry form
-  h+='<div class="bg-white rounded-xl border border-slate-200 p-4 mb-4">';
+  h+='<div class="bg-white rounded-xl border border-warm p-4 mb-4">';
   h+='<h4 class="text-sm font-semibold text-slate-700 mb-2">Walk-In / Manual Entry</h4>';
   h+='<div class="flex gap-2 items-end flex-wrap">';
-  h+='<div><label class="text-xs text-slate-500">Full Name *</label><input id="signinNameInput" type="text" class="block w-44 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="Full name..."></div>';
-  h+='<div><label class="text-xs text-slate-500">Age</label><input id="signinAgeInput" type="text" class="block w-16 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="Age"></div>';
-  h+='<div><label class="text-xs text-slate-500">Email</label><input id="signinEmailInput" type="email" class="block w-48 px-2 py-1.5 border border-slate-200 rounded text-sm mt-0.5" placeholder="Email..."></div>';
+  h+='<div><label class="text-xs text-slate-500">Full Name *</label><input id="signinNameInput" type="text" class="block w-44 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="Full name..."></div>';
+  h+='<div><label class="text-xs text-slate-500">Age</label><input id="signinAgeInput" type="text" class="block w-16 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="Age"></div>';
+  h+='<div><label class="text-xs text-slate-500">Email</label><input id="signinEmailInput" type="email" class="block w-48 px-2 py-1.5 border border-warm rounded text-sm mt-0.5" placeholder="Email..."></div>';
   h+='<button id="signinAddBtn" class="bg-mc-blue text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-opacity-90">+ Add & Check In</button>';
   h+='</div></div>';
 
   // Table
-  h+='<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">';
-  h+='<table class="w-full text-sm"><thead class="bg-slate-50 border-b border-slate-200"><tr>';
+  h+='<div class="bg-white rounded-xl border border-warm overflow-hidden">';
+  h+='<table class="w-full text-sm"><thead class="bg-mc-warm-light border-b border-slate-200"><tr>';
   h+='<th class="text-center px-3 py-2 w-12">\u2713</th>';
   h+='<th class="text-left px-4 py-2 font-medium text-slate-600">Name</th>';
   h+='<th class="text-left px-4 py-2 font-medium text-slate-600">Age</th>';
@@ -2447,14 +2584,14 @@ function renderAgendas(){
   if(!grid)return;
   var h='';
   if(meetingAgendas.length===0){
-    h='<div class="col-span-full bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center"><p class="text-slate-400 mb-2">No meeting agendas yet</p><p class="text-xs text-slate-300">Create one above to start building your agenda</p></div>';
+    h='<div class="col-span-full bg-white rounded-xl shadow-sm border border-warm p-12 text-center"><p class="text-slate-400 mb-2">No meeting agendas yet</p><p class="text-xs text-slate-300">Create one above to start building your agenda</p></div>';
     grid.innerHTML=h;return;
   }
   meetingAgendas.forEach(function(ag){
     var items=meetingAgendaItems.filter(function(i){return i.agenda_id===ag.id;});
     var doneCount=items.filter(function(i){return i.completed;}).length;
     var pct=items.length>0?Math.round(doneCount/items.length*100):0;
-    h+='<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md hover:border-blue-200 transition cursor-pointer group" onclick="openAgenda('+ag.id+')">';
+    h+='<div class="bg-white rounded-xl shadow-sm border border-warm p-5 hover:shadow-md hover:border-blue-200 transition cursor-pointer group" onclick="openAgenda('+ag.id+')">';
     h+='<div class="flex items-start justify-between mb-2">';
     h+='<h3 class="font-semibold text-slate-800 group-hover:text-mc-blue transition">'+esc(ag.title)+'</h3>';
     h+='<button onclick="event.stopPropagation();deleteAgenda('+ag.id+')" class="text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>';
@@ -2512,7 +2649,7 @@ function renderAgendaDetail(){
   h+='<h3 class="text-lg font-bold text-slate-800 cursor-pointer hover:text-mc-blue transition" onclick="editAgendaTitle('+ag.id+',this)">'+esc(ag.title)+'</h3>';
   h+='<p class="text-xs text-slate-400 cursor-pointer hover:text-mc-blue" onclick="editAgendaDate('+ag.id+',this)">'+(ag.meeting_date?new Date(ag.meeting_date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}):'Click to set date')+'</p>';
   h+='</div>';
-  h+='<button onclick="exportAgendaMd('+ag.id+')" class="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition">Export</button>';
+  h+='<button onclick="exportAgendaMd('+ag.id+')" class="px-3 py-1.5 border border-warm text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition">Export</button>';
   h+='</div>';
   // Two-column layout: items (left) + action sidebar (right)
   h+='<div class="flex gap-5">';
@@ -2590,18 +2727,18 @@ function renderAgendaDetail(){
   // Inline add-item input (like a todo app)
   h+='<div class="bg-white rounded-lg border border-dashed border-slate-300 p-3 hover:border-mc-blue transition">';
   h+='<div class="flex gap-2">';
-  h+='<input id="agendaNewItemTitle" type="text" placeholder="Type a new item and press Enter..." class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onkeydown="if(event.key===\'Enter\')addAgendaItemInline('+ag.id+')">';
-  h+='<input id="agendaNewItemOwner" type="text" placeholder="Owner" class="w-28 px-2 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onkeydown="if(event.key===\'Enter\')addAgendaItemInline('+ag.id+')">';
+  h+='<input id="agendaNewItemTitle" type="text" placeholder="Type a new item and press Enter..." class="flex-1 px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onkeydown="if(event.key===\'Enter\')addAgendaItemInline('+ag.id+')">';
+  h+='<input id="agendaNewItemOwner" type="text" placeholder="Owner" class="w-28 px-2 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onkeydown="if(event.key===\'Enter\')addAgendaItemInline('+ag.id+')">';
   h+='<button onclick="addAgendaItemInline('+ag.id+')" class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition whitespace-nowrap">Add</button>';
   h+='</div></div>';
   h+='</div>';
   // RIGHT — action tracker sidebar
   h+='<div class="w-72 flex-shrink-0 hidden lg:block">';
-  h+='<div class="bg-white rounded-xl shadow-sm border border-slate-200 sticky top-0">';
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm sticky top-0">';
   h+='<div class="p-3 border-b border-slate-100">';
   h+='<p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Action Tracker</p>';
   h+='<p class="text-[10px] text-slate-400 mt-0.5">Click an item to add it to this agenda</p>';
-  h+='<input id="actionSearchFilter" type="text" placeholder="Search actions..." class="mt-2 w-full px-2 py-1.5 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" oninput="filterActionSidebar()">';
+  h+='<input id="actionSearchFilter" type="text" placeholder="Search actions..." class="mt-2 w-full px-2 py-1.5 border border-warm rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" oninput="filterActionSidebar()">';
   h+='</div>';
   h+='<div id="actionSidebarList" class="max-h-[50vh] overflow-y-auto p-2 space-y-1">';
   var alreadyLinked={};
@@ -2753,11 +2890,11 @@ function editAgendaItemOwner(itemId,el){
 function showAttachForm(itemId){
   var row=document.getElementById('attachRow_'+itemId);
   if(!row||row.children.length>0)return;
-  var h='<div class="flex items-center gap-2 bg-slate-50 rounded-lg p-2 border border-slate-200">';
-  h+='<input id="attName_'+itemId+'" type="text" placeholder="Label" class="w-28 px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400">';
-  h+='<input id="attUrl_'+itemId+'" type="text" placeholder="Paste URL..." class="flex-1 px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400">';
+  var h='<div class="flex items-center gap-2 bg-slate-50 rounded-lg p-2 border border-warm">';
+  h+='<input id="attName_'+itemId+'" type="text" placeholder="Label" class="w-28 px-2 py-1 border border-warm rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400">';
+  h+='<input id="attUrl_'+itemId+'" type="text" placeholder="Paste URL..." class="flex-1 px-2 py-1 border border-warm rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400">';
   h+='<span class="text-slate-300 text-xs">or</span>';
-  h+='<label class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-mc-blue cursor-pointer hover:bg-blue-50 transition"><input type="file" class="hidden" onchange="uploadAgendaFile('+itemId+',this)">Upload</label>';
+  h+='<label class="px-2 py-1 bg-white border border-warm rounded text-xs text-mc-blue cursor-pointer hover:bg-blue-50 transition"><input type="file" class="hidden" onchange="uploadAgendaFile('+itemId+',this)">Upload</label>';
   h+='<button onclick="saveAgendaAttachment('+itemId+')" class="px-2 py-1 bg-mc-blue text-white rounded text-xs font-medium hover:bg-opacity-90">Save</button>';
   h+='<button onclick="document.getElementById(\'attachRow_'+itemId+'\').innerHTML=\'\'" class="text-slate-400 hover:text-slate-600"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>';
   h+='</div>';
@@ -3268,7 +3405,7 @@ async function handleCalImportFile(input){
   })).filter(r=>r.title&&r.date);
   // Show preview
   const prev=calImportRows.slice(0,5);
-  let th='<thead class="bg-slate-50"><tr><th class="px-2 py-1 text-left">Title</th><th class="px-2 py-1 text-left">Requested By</th><th class="px-2 py-1 text-left">Date</th><th class="px-2 py-1 text-left">Time</th><th class="px-2 py-1 text-left">Type</th><th class="px-2 py-1 text-left">Recurrence</th></tr></thead>';
+  let th='<thead class="bg-mc-warm-light"><tr><th class="px-2 py-1 text-left">Title</th><th class="px-2 py-1 text-left">Requested By</th><th class="px-2 py-1 text-left">Date</th><th class="px-2 py-1 text-left">Time</th><th class="px-2 py-1 text-left">Type</th><th class="px-2 py-1 text-left">Recurrence</th></tr></thead>';
   let tb='<tbody>'+prev.map(r=>'<tr class="border-t border-slate-100"><td class="px-2 py-1">'+esc(r.title)+'</td><td class="px-2 py-1">'+esc(r.requestedBy||'—')+'</td><td class="px-2 py-1">'+r.date+'</td><td class="px-2 py-1">'+(r.start||'All day')+'</td><td class="px-2 py-1">'+r.type+'</td><td class="px-2 py-1">'+(r.recurrence!=='none'?r.recurrence+' until '+r.recEnd:'—')+'</td></tr>').join('')+'</tbody>';
   document.getElementById('calImportTable').innerHTML=th+tb;
   document.getElementById('calImportCount').textContent=calImportRows.length+' event(s) found in file';
@@ -3399,7 +3536,7 @@ function renderFiles(){
     const isLink=f.storage_path&&f.storage_path.startsWith('link::');
     const url=isLink?f.storage_path.substring(6):SUPABASE_URL+'/storage/v1/object/public/mc-files/'+f.storage_path;
     const icon=isLink?'<svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>':getFileIcon(f.file_type);
-    h+='<div class="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition group">';
+    h+='<div class="bg-white rounded-xl border border-warm p-4 hover:shadow-md transition group">';
     h+='<div class="flex items-start gap-3">';
     h+='<a href="'+url+'" target="_blank" class="flex-shrink-0 mt-0.5">'+icon+'</a>';
     h+='<div class="flex-1 min-w-0">';
