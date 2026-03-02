@@ -232,6 +232,13 @@ Add Applicant</button>
 <div id="view-onboarding" class="p-8 fade-in hidden">
 <h2 class="text-2xl font-display text-slate-800 mb-2">Onboarding</h2>
 <p class="text-slate-500 text-sm mb-6">Track onboarding progress for accepted members</p>
+<div class="flex items-center gap-4 mb-4 border-b border-warm pb-1" id="obTabBar">
+<button class="tab-btn active text-sm" onclick="setObTab('all')">All Members</button>
+<button class="tab-btn text-sm" onclick="setObTab('needs')">Ready for Onboarding</button>
+<button class="tab-btn text-sm" onclick="setObTab('inprocess')">In Process</button>
+<button class="tab-btn text-sm" onclick="setObTab('complete')">Complete</button>
+<button class="tab-btn text-sm" onclick="setObTab('badge')">Ready for Badge</button>
+</div>
 <div class="flex items-center gap-3 mb-6">
 <div class="ms-wrap" id="msObTier"></div>
 <div class="ms-wrap" id="msObProgress"></div>
@@ -576,11 +583,12 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let allApplicants=[];
 let importData=[];
 let currentUser=localStorage.getItem('mc_user')||'';
+let obAssignees={};
 
 const ONBOARDING_STEPS={
-  Ponyride:[{key:'background_check_sent',label:'Background Check Sent',isBool:true},{key:'background_check',label:'Background Check Complete',isDate:true},{key:'safety_training_sent',label:'Safety Training Sent',isBool:true},{key:'safety_training',label:'Safety Training Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge',label:'BGCGD Badge',isBool:true},{key:'mc_access',label:'MC Access',isBool:true}],
-  Vanguard:[{key:'background_check_sent',label:'Background Check Sent',isBool:true},{key:'background_check',label:'Background Check Complete',isDate:true},{key:'safety_training_sent',label:'Safety Training Sent',isBool:true},{key:'safety_training',label:'Safety Training Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge',label:'BGCGD Badge',isBool:true},{key:'mc_access',label:'MC Access',isBool:true}],
-  Originator:[{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge',label:'BGCGD Badge',isBool:true},{key:'mc_access',label:'MC Access',isBool:true}],
+  Ponyride:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'background_check_sent',label:'BG Check Sent',isBool:true},{key:'background_check',label:'BG Check Complete',isDate:true},{key:'safety_training_sent',label:'MyBGCA Account',isBool:true},{key:'safety_training',label:'Safety Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
+  Vanguard:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'background_check_sent',label:'BG Check Sent',isBool:true},{key:'background_check',label:'BG Check Complete',isDate:true},{key:'safety_training_sent',label:'MyBGCA Account',isBool:true},{key:'safety_training',label:'Safety Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
+  Originator:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
 };
 
 const DETAIL_FIELDS={
@@ -620,10 +628,20 @@ function showApp(){
 
 // DATA
 async function loadData(){
-  const{data,error}=await sb.from('applicants').select('*').order('created_at',{ascending:false});
-  if(error){showToast('Error: '+error.message);return;}
-  allApplicants=data||[];
+  const[appRes,assignRes]=await Promise.all([
+    sb.from('applicants').select('*').order('created_at',{ascending:false}),
+    sb.from('ob_assignees').select('*')
+  ]);
+  if(appRes.error){showToast('Error: '+appRes.error.message);return;}
+  allApplicants=appRes.data||[];
+  obAssignees={};
+  (assignRes.data||[]).forEach(r=>{obAssignees[r.step_key]=r.assignee;});
   renderAll();
+}
+async function updateObAssignee(stepKey,value){
+  obAssignees[stepKey]=value;
+  const{error}=await sb.from('ob_assignees').upsert({step_key:stepKey,assignee:value},{onConflict:'step_key'});
+  if(error)showToast('Error saving assignee: '+error.message);
 }
 
 sb.channel('applicants-changes').on('postgres_changes',{event:'*',schema:'public',table:'applicants'},payload=>{
@@ -642,7 +660,7 @@ function fmtDate(d){if(!d)return'—';if(/^\d{4}-\d{2}-\d{2}$/.test(d)){const p=
 function fmtTime12(t){if(!t)return'';const p=t.substring(0,5).split(':');let hr=parseInt(p[0]);const mn=p[1];const ampm=hr>=12?'PM':'AM';hr=hr%12||12;return hr+':'+mn+' '+ampm;}
 function isUrl(s){try{new URL(s);return true}catch{return false}}
 function starsHtml(score,id){return[1,2,3,4,5].map(i=>`<span class="score-star ${i<=score?'filled':''}" onclick="updateField('${id}','interview_score',${i})">★</span>`).join('');}
-function obPct(a){const steps=ONBOARDING_STEPS[a.tier]||[];const done=steps.filter(s=>s.isBool?a[s.key]:a[s.key]&&a[s.key]!=='Pending Recipient').length;return steps.length?Math.round(done/steps.length*100):0;}
+function obPct(a){const steps=(ONBOARDING_STEPS[a.tier]||[]).filter(s=>!s.excludeFromProgress);const done=steps.filter(s=>s.isBool?a[s.key]:a[s.key]&&a[s.key]!=='Pending Recipient').length;return steps.length?Math.round(done/steps.length*100):0;}
 
 // UTILITIES
 function timeAgo(dateStr){
@@ -827,7 +845,7 @@ function renderApplications(){
   </tr>`;
   document.getElementById('appTableBody').innerHTML=f.map(a=>{
     const iSched=a.interview_scheduled?fmtSchedShort(a.interview_scheduled):'';
-    const intLabel=a.interviewed?`<span class="text-xs text-green-600 font-medium">${a.interview_score?'★'+a.interview_score+'/24':'Done'}</span>${iSched?'<br><span class="text-xs text-slate-400">'+iSched+'</span>':''}`:(iSched?`<span class="text-xs text-blue-600">${iSched}</span>`:'<span class="text-xs text-slate-400">—</span>');
+    const intLabel=a.interviewed?`<span class="text-xs text-green-600 font-medium">${a.interview_score?a.interview_score+'/24':'Done'}</span><button onclick="event.stopPropagation();openRubricForApplicant('${a.id}')" class="ml-1 text-slate-400 hover:text-mc-blue transition" title="Open Rubric">📋</button>${iSched?'<br><span class="text-xs text-slate-400">'+iSched+'</span>':''}`:(iSched?`<span class="text-xs text-blue-600">${iSched}</span><button onclick="event.stopPropagation();openRubricForApplicant('${a.id}')" class="ml-1 text-slate-400 hover:text-mc-blue transition" title="Open Rubric">📋</button>`:'<span class="text-xs text-slate-400">—</span>');
     const intBadge=a.reviewer_interest==='yes'?'<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Yes</span>':(a.reviewer_interest==='no'?'<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">No</span>':'<span class="text-xs text-slate-400">—</span>');
     const notesSnip=a.review_notes?`<span class="text-xs text-slate-500">${esc(a.review_notes)}</span>`:'<span class="text-xs text-slate-400">—</span>';
     return`<tr class="hover:bg-slate-50 cursor-pointer align-top" onclick="openDetail('${a.id}')">
@@ -1044,6 +1062,13 @@ function exportMembers(){
 }
 
 // ONBOARDING
+function obReadyForBadge(a){
+  if(a.bgcgd_badge_printed&&a.bgcgd_badge_printed!=='Pending Recipient') return false;
+  const t=a.tier;
+  if(t==='Ponyride'||t==='Vanguard') return !!(a.background_check&&a.background_check!=='Pending Recipient') && !!(a.safety_training&&a.safety_training!=='Pending Recipient') && !!a.myclubhub_created && !!a.badge_photo;
+  if(t==='Originator') return !!a.myclubhub_created && !!a.badge_photo;
+  return false;
+}
 function renderOnboarding(){
   // Init multi-select filters
   if(!msState['msObTier'])msInit('msObTier',renderOnboarding);
@@ -1053,8 +1078,22 @@ function renderOnboarding(){
   const selTier=msGetSelected('msObTier');
   const selProg=msGetSelected('msObProgress');
   let m=allApplicants.filter(a=>a.decision==='Accepted');
+  // Update tab count badges (all values are hardcoded labels + integer counts, safe for innerHTML)
+  var cN=m.filter(a=>!a.welcome_email_sent).length,cIP=m.filter(a=>a.welcome_email_sent&&obPct(a)<100).length,cC=m.filter(a=>obPct(a)===100).length,cB=m.filter(a=>obReadyForBadge(a)).length;
+  var tcMap={all:m.length,needs:cN,inprocess:cIP,complete:cC,badge:cB},tcLbl={all:'All Members',needs:'Ready for Onboarding',inprocess:'In Process',complete:'Complete',badge:'Ready for Badge'};
+  document.querySelectorAll('#obTabBar .tab-btn').forEach(function(b){var mt=b.getAttribute('onclick').match(/setObTab\('(\w+)'\)/);if(mt){var k=mt[1];b.innerHTML=tcLbl[k]+' <span class="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-slate-200 text-slate-600">'+tcMap[k]+'</span>';}});
+  // Tab filter
+  if(obTab==='needs') m=m.filter(a=>!a.welcome_email_sent);
+  else if(obTab==='inprocess') m=m.filter(a=>a.welcome_email_sent&&obPct(a)<100);
+  else if(obTab==='complete') m=m.filter(a=>obPct(a)===100);
+  else if(obTab==='badge') m=m.filter(a=>obReadyForBadge(a));
   if(selTier.size)m=m.filter(a=>selTier.has(a.tier));
   if(selProg.size)m=m.filter(a=>{const pct=obPct(a);const isComplete=pct===100;return(selProg.has('Fully Complete')&&isComplete)||(selProg.has('In Progress')&&!isComplete);});
+  // Collect all unique steps across filtered members, using Ponyride order as canonical
+  const allStepKeys=[];const allStepMap={};
+  const memberStepKeys=new Set();
+  m.forEach(a=>{(ONBOARDING_STEPS[a.tier]||[]).forEach(s=>{memberStepKeys.add(s.key);allStepMap[s.key]=s;});});
+  (ONBOARDING_STEPS['Ponyride']||[]).forEach(s=>{if(memberStepKeys.has(s.key))allStepKeys.push(s.key);});
   // Sorting
   if(obSortField){
     m.sort((a,b)=>{
@@ -1063,50 +1102,85 @@ function renderOnboarding(){
       else if(obSortField==='email'){va=(a.email||'').toLowerCase();vb=(b.email||'').toLowerCase();}
       else if(obSortField==='tier'){va=a.tier||'';vb=b.tier||'';}
       else if(obSortField==='progress'){va=obPct(a);vb=obPct(b);}
+      else if(allStepMap[obSortField]){
+        const s=allStepMap[obSortField];
+        if(s.isBool){va=a[s.key]?1:0;vb=b[s.key]?1:0;}
+        else{va=a[s.key]&&a[s.key]!=='Pending Recipient'?a[s.key]:'';vb=b[s.key]&&b[s.key]!=='Pending Recipient'?b[s.key]:'';}
+        // Empty values last
+        if(!va&&vb)return 1;if(va&&!vb)return -1;
+      }
       else{va='';vb='';}
       if(va<vb)return obSortDir==='asc'?-1:1;
       if(va>vb)return obSortDir==='asc'?1:-1;
       return 0;
     });
   }
-  // Collect all unique steps across filtered members
-  const allStepKeys=[];const allStepMap={};
-  m.forEach(a=>{(ONBOARDING_STEPS[a.tier]||[]).forEach(s=>{if(!allStepMap[s.key]){allStepMap[s.key]=s;allStepKeys.push(s.key);}});});
+  const grid=document.getElementById('onboardingGrid');
+  // Simplified card view for Ready for Onboarding tab
+  if(obTab==='needs'){
+    let ch='';
+    if(m.length===0){ch='<p class="text-slate-400 text-center py-12">No accepted members awaiting welcome email.</p>';}
+    else{
+      ch='<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+      m.forEach(a=>{
+        ch+='<div class="bg-white rounded-xl border border-warm p-4 hover:shadow-md transition">';
+        ch+='<div class="flex items-start justify-between mb-2"><div><a href="#" onclick="event.preventDefault();openDetail(\''+a.id+'\')" class="font-semibold text-slate-800 hover:text-mc-blue">'+esc(a.first_name)+' '+esc(a.last_name)+'</a>';
+        ch+='<p class="text-xs text-slate-500 mt-0.5">'+esc(a.email||'')+'</p></div>'+tierBadge(a.tier)+'</div>';
+        ch+='<div class="mt-3 pt-3 border-t border-slate-100"><label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" '+(a.welcome_email_sent?'checked':'')+' onchange="updateField(\''+a.id+'\',\'welcome_email_sent\',this.checked)" class="w-5 h-5 cursor-pointer"><span class="text-sm font-medium text-slate-700">Welcome Email Sent</span></label></div>';
+        ch+='</div>';
+      });
+      ch+='</div>';
+    }
+    grid.innerHTML=ch;
+    return;
+  }
+  const thCls='px-2 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap cursor-pointer hover:text-mc-blue select-none';
+  const fixedCols=4;
+  const totalCols=fixedCols+allStepKeys.length;
+  // Using innerHTML for performance with large tables - all values are escaped via esc()
   let h='<table class="w-full text-sm bg-white rounded-xl shadow-sm border border-warm"><thead><tr class="bg-mc-warm-light border-b" style="border-color:var(--border-warm)">';
   h+='<th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'name\')">Member'+obSortArrow('name')+'</th>';
   h+='<th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'email\')">Email'+obSortArrow('email')+'</th>';
   h+='<th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'tier\')">Tier'+obSortArrow('tier')+'</th>';
   h+='<th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'progress\')">Progress'+obSortArrow('progress')+'</th>';
-  allStepKeys.forEach(k=>{h+='<th class="px-2 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">'+allStepMap[k].label+'</th>';});
+  allStepKeys.forEach(k=>{h+='<th class="'+thCls+'" onclick="toggleObSort(\''+k+'\')">'+allStepMap[k].label+obSortArrow(k)+'</th>';});
   h+='</tr></thead><tbody>';
+  // Assignee row
+  h+='<tr class="border-b border-slate-200" style="background:#eef2ff">';
+  h+='<td colspan="4" class="px-4 py-2 text-xs font-semibold text-indigo-600 uppercase tracking-wide">Assigned To</td>';
+  allStepKeys.forEach(k=>{
+    h+='<td class="px-2 py-2 text-center"><input type="text" value="'+esc(obAssignees[k]||'')+'" onblur="updateObAssignee(\''+k+'\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" class="px-1 py-0.5 border border-indigo-200 rounded text-xs w-24 text-center bg-white" placeholder="\u2014"></td>';
+  });
+  h+='</tr>';
   if(m.length===0){
-    h+='<tr><td colspan="'+(4+allStepKeys.length)+'" class="px-4 py-12 text-center text-slate-400">No accepted members match this filter.</td></tr>';
+    h+='<tr><td colspan="'+totalCols+'" class="px-4 py-12 text-center text-slate-400">No accepted members match this filter.</td></tr>';
   } else {
     m.forEach(a=>{
       const steps=ONBOARDING_STEPS[a.tier]||[];
       const pct=obPct(a);
       const stepKeySet=new Set(steps.map(s=>s.key));
       h+='<tr class="border-b border-slate-100 hover:bg-slate-50">';
-      h+='<td class="px-4 py-3 font-medium text-slate-800 whitespace-nowrap"><a href="#" onclick="event.preventDefault();openDetail(\''+a.id+'\')" class="hover:text-mc-blue">'+esc(a.first_name)+' '+esc(a.last_name)+'</a></td>';
+      h+='<td class="px-4 py-3 font-medium text-slate-800 whitespace-nowrap"><a href="#" onclick="event.preventDefault();openDetail(\''+a.id+'\')" class="hover:text-mc-blue">'+esc(a.first_name)+' '+esc(a.last_name)+'</a> <button onclick="event.stopPropagation();openRubricForApplicant(\''+a.id+'\')" class="text-slate-400 hover:text-mc-blue transition" title="Open Rubric">📋</button></td>';
       h+='<td class="px-4 py-3 text-slate-500 text-xs">'+esc(a.email||'')+'</td>';
       h+='<td class="px-3 py-3">'+tierBadge(a.tier)+'</td>';
       h+='<td class="px-3 py-3 text-center"><div class="flex items-center gap-2 justify-center"><div class="w-16 bg-slate-200 rounded-full h-1.5"><div class="h-1.5 rounded-full '+(pct===100?'bg-green-500':'bg-mc-blue')+'" style="width:'+pct+'%"></div></div><span class="text-xs font-semibold '+(pct===100?'text-green-600':'text-slate-600')+'">'+pct+'%</span></div></td>';
       allStepKeys.forEach(k=>{
-        if(!stepKeySet.has(k)){h+='<td class="px-2 py-3 text-center text-slate-200">—</td>';return;}
+        if(!stepKeySet.has(k)){h+='<td class="px-2 py-3 text-center text-slate-200">\u2014</td>';return;}
         const s=allStepMap[k];
-        if(s.isBool){
-          const ok=a[s.key];
-          h+='<td class="px-2 py-3 text-center"><input type="checkbox" '+(ok?'checked':'')+' onchange="updateField(\''+a.id+"','"+s.key+"',this.checked)\" class=\"w-4 h-4 cursor-pointer\"></td>";
+        if(k==='onboarding_complete'){
+          h+='<td class="px-2 py-3 text-center"><div class="flex flex-col items-center gap-1"><input type="checkbox" '+(a.onboarding_complete?'checked':'')+' onchange="updateField(\''+a.id+'\',\'onboarding_complete\',this.checked)" class="w-4 h-4 cursor-pointer">'+(a.onboarding_complete?'<input type="date" value="'+(a.onboarding_complete_date||'')+'" onchange="updateField(\''+a.id+'\',\'onboarding_complete_date\',this.value)" class="px-1 py-0.5 border border-warm rounded text-xs w-28 bg-green-50 text-green-700">':'')+'</div></td>';
+        } else if(s.isBool){
+          h+='<td class="px-2 py-3 text-center"><input type="checkbox" '+(a[s.key]?'checked':'')+' onchange="updateField(\''+a.id+'\',\''+s.key+'\',this.checked)" class="w-4 h-4 cursor-pointer"></td>';
         } else {
           const val=a[s.key],ok=val&&val!=='Pending Recipient';
-          h+='<td class="px-2 py-3 text-center"><input type="date" value="'+(ok?val:'')+'" onchange="updateField(\''+a.id+"','"+s.key+"',this.value)\" class=\"px-1 py-0.5 border border-warm rounded text-xs w-28 "+(ok?'bg-green-50 text-green-700':'')+'"></td>';
+          h+='<td class="px-2 py-3 text-center"><input type="date" value="'+(ok?val:'')+'" onchange="updateField(\''+a.id+'\',\''+s.key+'\',this.value)" class="px-1 py-0.5 border border-warm rounded text-xs w-28 '+(ok?'bg-green-50 text-green-700':'')+'"></td>';
         }
       });
       h+='</tr>';
     });
   }
   h+='</tbody></table>';
-  document.getElementById('onboardingGrid').innerHTML=h;
+  grid.innerHTML=h;
 }
 
 // DETAIL PANEL
@@ -1144,6 +1218,7 @@ function openDetail(id){
     onboardingHtml=`<div class="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
       <h4 class="font-semibold text-green-800 mb-3">Onboarding Checklist</h4>
       ${steps.map(s=>{
+        if(s.key==='onboarding_complete')return`<label class="flex items-center gap-3 py-2 cursor-pointer border-t border-green-200 mt-2 pt-2"><input type="checkbox" ${a.onboarding_complete?'checked':''} onchange="updateField('${a.id}','onboarding_complete',this.checked)" class="w-4 h-4"><span class="text-sm font-medium text-slate-700">Onboarding Complete</span>${a.onboarding_complete?'<span class="text-xs text-green-600 ml-auto">Done</span>':''}</label>${a.onboarding_complete?`<div class="flex items-center gap-3 py-1 ml-7"><span class="text-sm text-slate-700 w-36">Completion Date</span><input type="date" value="${a.onboarding_complete_date||''}" onchange="updateField('${a.id}','onboarding_complete_date',this.value)" class="px-2 py-1 border border-warm rounded text-sm flex-1"></div>`:''}`;
         if(s.isBool)return`<label class="flex items-center gap-3 py-2 cursor-pointer"><input type="checkbox" ${a[s.key]?'checked':''} onchange="updateField('${a.id}','${s.key}',this.checked)" class="w-4 h-4"><span class="text-sm text-slate-700">${s.label}</span>${a[s.key]?'<span class="text-xs text-green-600 ml-auto">Complete</span>':''}</label>`;
         return`<div class="flex items-center gap-3 py-2"><span class="text-sm text-slate-700 w-36">${s.label}</span><input type="date" value="${a[s.key]&&a[s.key]!=='Pending Recipient'?a[s.key]:''}" onchange="updateField('${a.id}','${s.key}',this.value)" class="px-2 py-1 border border-warm rounded text-sm flex-1">${a[s.key]==='Pending Recipient'?'<span class="text-xs text-amber-600">Pending</span>':''}</div>`;
       }).join('')}
@@ -1208,7 +1283,7 @@ function openDetail(id){
   if(iSchedVal){h+='<button onclick="clearInterviewDate(this)" data-aid="'+a.id+'" class="text-xs text-slate-400 hover:text-red-500 ml-1" title="Clear">✕</button>';}
   h+='</div></div>';
   h+='<label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" '+(a.interviewed?'checked':'')+' onchange="updateField(\''+a.id+"','interviewed',this.checked)\" class=\"w-4 h-4\"><span class=\"text-sm font-medium text-slate-700\">Interviewed</span></label>";
-  h+='<div class="mb-3"><p class="text-xs text-slate-500 mb-1">Score</p><div class="flex gap-1">'+starsHtml(a.interview_score||0,a.id)+'</div></div>';
+  h+='<div class="mb-3"><div class="flex items-center gap-3"><div><p class="text-xs text-slate-500 mb-1">Rubric Score</p><span class="text-lg font-bold text-blue-800">'+(a.interview_score||0)+'/24</span></div><button onclick="event.stopPropagation();openRubricForApplicant(\''+a.id+'\')" class="ml-auto px-3 py-1.5 bg-mc-blue text-white text-xs font-semibold rounded-lg hover:bg-blue-800 transition">Edit Rubric</button></div></div>';
   var intNotes=(a.interview_notes||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   h+='<div><p class="text-xs text-slate-500 mb-1">Interview Notes</p><textarea onchange="updateField(\''+a.id+"','interview_notes',this.value)\" class=\"w-full px-3 py-2 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300\" rows=\"3\" placeholder=\"Notes from the interview...\">"+intNotes+'</textarea></div>';
   h+='</div>';
@@ -1295,7 +1370,7 @@ async function updateField(id,field,value){
   // Refresh detail modal if open for this applicant (fixes star rating, checkbox updates)
   const modal=document.getElementById('detailModal');
   if(modal&&!modal.classList.contains('hidden')){
-    const refreshFields=['interview_score','interviewed','interview_notes','interview_scheduled','review_notes','reviewer_interest'];
+    const refreshFields=['interview_score','interviewed','interview_notes','interview_scheduled','review_notes','reviewer_interest','welcome_email_sent','onboarding_complete','onboarding_complete_date'];
     if(refreshFields.includes(field)||field.startsWith('background_check')||field.startsWith('safety_training')||field==='myclubhub_member_id')openDetail(id);
   }
 }
@@ -1385,8 +1460,10 @@ function msGetSelected(containerId){return msState[containerId]?msState[containe
 // Close dropdowns on outside click
 document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))document.querySelectorAll('.ms-drop').forEach(d=>d.classList.add('hidden'));});
 
-// ─── ONBOARDING SORT ───
+// ─── ONBOARDING SORT & TABS ───
 let obSortField='', obSortDir='asc';
+let obTab='all';
+function setObTab(tab){obTab=tab;var tabLabels={all:'All Members',needs:'Ready for Onboarding',inprocess:'In Process',complete:'Complete',badge:'Ready for Badge'};document.querySelectorAll('#obTabBar .tab-btn').forEach(b=>b.classList.toggle('active',b.textContent===tabLabels[tab]));renderOnboarding();}
 function toggleObSort(field){if(obSortField===field){obSortDir=obSortDir==='asc'?'desc':'asc';}else{obSortField=field;obSortDir='asc';}renderOnboarding();}
 function obSortArrow(field){if(obSortField!==field)return' <span class="text-slate-300 ml-0.5">↕</span>';return obSortDir==='asc'?' <span class="text-mc-blue ml-0.5">↑</span>':' <span class="text-mc-blue ml-0.5">↓</span>';}
 
@@ -1740,6 +1817,8 @@ function renderRooms(){
 var thursdayScores=[], thursdayStaffing=[], thursdayFloorplan=[], thursdayMeetups=[], thursdaySignin=[];
 var activeRubricApplicantId=null;
 var activeThursTab='interviews';
+var rubricScoreCache={};
+var rubricEventDate=null;
 var thursdayFloorplanImage=null;
 
 function getThursdayDate(){
@@ -1750,6 +1829,25 @@ function getThursdayDate(){
   var iso=d.toISOString().substring(0,10);
   if(dp)dp.value=iso;
   return iso;
+}
+
+async function fetchRubricScore(applicantId){
+  try{
+    var r=await sb.from('interview_scores').select('*').eq('applicant_id',applicantId).order('updated_at',{ascending:false}).limit(1);
+    if(r.data&&r.data.length>0){rubricScoreCache[applicantId]=r.data[0];}
+    else{rubricScoreCache[applicantId]=null;}
+  }catch(e){console.error('fetchRubricScore error',e);rubricScoreCache[applicantId]=null;}
+}
+
+function getRubricDate(applicant){
+  if(rubricEventDate)return rubricEventDate;
+  var dp=document.getElementById('thursdayDatePicker');
+  if(dp&&dp.value&&activeThursTab==='interviews')return dp.value;
+  if(applicant&&applicant.interview_scheduled){
+    var d=applicant.interview_scheduled;
+    if(d.length>=10)return d.substring(0,10);
+  }
+  return new Date().toISOString().substring(0,10);
 }
 
 async function loadThursdayData(){
@@ -1896,6 +1994,7 @@ function openRubric(applicantId){
   if(!a){console.error('[THURS] openRubric: applicant not found! id=',applicantId,'allApplicants ids=',allApplicants.slice(0,5).map(function(x){return x.id+' ('+typeof x.id+')';}));return;}
   console.log('[THURS] openRubric: found applicant',a.first_name,a.last_name);
   var sc=null;for(var j=0;j<thursdayScores.length;j++){if(thursdayScores[j].applicant_id==applicantId){sc=thursdayScores[j];break;}}
+  if(!sc&&rubricScoreCache[applicantId])sc=rubricScoreCache[applicantId];
   if(!sc)sc={};
   var modal=document.getElementById('rubricModal');
   modal.classList.remove('hidden');
@@ -2008,11 +2107,21 @@ function openRubric(applicantId){
 function closeRubric(){
   document.getElementById('rubricModal').classList.add('hidden');
   activeRubricApplicantId=null;
+  rubricEventDate=null;
+}
+
+async function openRubricForApplicant(applicantId){
+  await fetchRubricScore(applicantId);
+  var a=null;for(var i=0;i<allApplicants.length;i++){if(allApplicants[i].id==applicantId){a=allApplicants[i];break;}}
+  rubricEventDate=getRubricDate(a);
+  openRubric(applicantId);
 }
 
 async function setRubricScore(applicantId,field,val){
-  var dt=getThursdayDate();
+  var a=null;for(var ai2=0;ai2<allApplicants.length;ai2++){if(allApplicants[ai2].id==applicantId){a=allApplicants[ai2];break;}}
+  var dt=getRubricDate(a);
   var existing=null;for(var i=0;i<thursdayScores.length;i++){if(thursdayScores[i].applicant_id==applicantId){existing=thursdayScores[i];break;}}
+  if(!existing&&rubricScoreCache[applicantId])existing=rubricScoreCache[applicantId];
   try{
     if(existing){
       var upd={};upd[field]=val;upd.scored_by=currentUser;upd.updated_at=new Date().toISOString();
@@ -2023,8 +2132,9 @@ async function setRubricScore(applicantId,field,val){
     }
     var r=await sb.from('interview_scores').select('*').eq('event_date',dt);
     thursdayScores=(r.data)||[];
-    // Sync interview status back to applicants table
+    await fetchRubricScore(applicantId);
     var sc2=null;for(var j=0;j<thursdayScores.length;j++){if(thursdayScores[j].applicant_id==applicantId){sc2=thursdayScores[j];break;}}
+    if(!sc2&&rubricScoreCache[applicantId])sc2=rubricScoreCache[applicantId];
     if(sc2){
       var scoreKeys=['curiosity_score','making_score','iteration_score','collaboration_score','resourcefulness_score','taste_score'];
       var totalScore=0;for(var sk=0;sk<scoreKeys.length;sk++){totalScore+=(sc2[scoreKeys[sk]]||0);}
@@ -2037,16 +2147,18 @@ async function setRubricScore(applicantId,field,val){
 }
 
 async function setRubricDecision(applicantId,dec){
-  var dt=getThursdayDate();
+  var a=null;for(var ai2=0;ai2<allApplicants.length;ai2++){if(allApplicants[ai2].id==applicantId){a=allApplicants[ai2];break;}}
+  var dt=getRubricDate(a);
   var existing=null;for(var i=0;i<thursdayScores.length;i++){if(thursdayScores[i].applicant_id==applicantId){existing=thursdayScores[i];break;}}
+  if(!existing&&rubricScoreCache[applicantId])existing=rubricScoreCache[applicantId];
   try{
     if(existing){
       await sb.from('interview_scores').update({decision:dec,scored_by:currentUser,updated_at:new Date().toISOString()}).eq('id',existing.id);
     }else{
       await sb.from('interview_scores').insert({applicant_id:applicantId,event_date:dt,decision:dec,scored_by:currentUser});
     }
-    // Calculate total score from rubric
     var sc2=null;for(var j=0;j<thursdayScores.length;j++){if(thursdayScores[j].applicant_id==applicantId){sc2=thursdayScores[j];break;}}
+    if(!sc2&&rubricScoreCache[applicantId])sc2=rubricScoreCache[applicantId];
     var scoreKeys=['curiosity_score','making_score','iteration_score','collaboration_score','resourcefulness_score','taste_score'];
     var totalScore=0;if(sc2){for(var sk=0;sk<scoreKeys.length;sk++){totalScore+=(sc2[scoreKeys[sk]]||0);}}
     var mappedDec=dec==='Priority Admit'?'Accepted':dec==='Admit'?'Accepted':dec==='Decline'?'Denied':dec;
@@ -2054,13 +2166,16 @@ async function setRubricDecision(applicantId,dec){
     await loadData();renderAll();
     var r=await sb.from('interview_scores').select('*').eq('event_date',dt);
     thursdayScores=(r.data)||[];
+    await fetchRubricScore(applicantId);
   }catch(e){console.error('setRubricDecision error',e);}
   openRubric(applicantId);
 }
 
 async function setRubricFlag(applicantId,checked){
-  var dt=getThursdayDate();
+  var a=null;for(var ai2=0;ai2<allApplicants.length;ai2++){if(allApplicants[ai2].id==applicantId){a=allApplicants[ai2];break;}}
+  var dt=getRubricDate(a);
   var existing=null;for(var i=0;i<thursdayScores.length;i++){if(thursdayScores[i].applicant_id==applicantId){existing=thursdayScores[i];break;}}
+  if(!existing&&rubricScoreCache[applicantId])existing=rubricScoreCache[applicantId];
   try{
     if(existing){
       await sb.from('interview_scores').update({red_flag:checked,updated_at:new Date().toISOString()}).eq('id',existing.id);
@@ -2069,13 +2184,16 @@ async function setRubricFlag(applicantId,checked){
     }
     var r=await sb.from('interview_scores').select('*').eq('event_date',dt);
     thursdayScores=(r.data)||[];
+    await fetchRubricScore(applicantId);
   }catch(e){console.error('setRubricFlag error',e);}
   openRubric(applicantId);
 }
 
 async function saveRubricText(applicantId,field,val){
-  var dt=getThursdayDate();
+  var a=null;for(var ai2=0;ai2<allApplicants.length;ai2++){if(allApplicants[ai2].id==applicantId){a=allApplicants[ai2];break;}}
+  var dt=getRubricDate(a);
   var existing=null;for(var i=0;i<thursdayScores.length;i++){if(thursdayScores[i].applicant_id==applicantId){existing=thursdayScores[i];break;}}
+  if(!existing&&rubricScoreCache[applicantId])existing=rubricScoreCache[applicantId];
   try{
     if(existing){
       var upd={};upd[field]=val;upd.updated_at=new Date().toISOString();
@@ -2086,12 +2204,15 @@ async function saveRubricText(applicantId,field,val){
     }
     var r=await sb.from('interview_scores').select('*').eq('event_date',dt);
     thursdayScores=(r.data)||[];
+    await fetchRubricScore(applicantId);
   }catch(e){console.error('saveRubricText error',e);}
 }
 
 async function toggleRubricPathway(applicantId,pathway){
-  var dt=getThursdayDate();
+  var a=null;for(var ai2=0;ai2<allApplicants.length;ai2++){if(allApplicants[ai2].id==applicantId){a=allApplicants[ai2];break;}}
+  var dt=getRubricDate(a);
   var existing=null;for(var i=0;i<thursdayScores.length;i++){if(thursdayScores[i].applicant_id==applicantId){existing=thursdayScores[i];break;}}
+  if(!existing&&rubricScoreCache[applicantId])existing=rubricScoreCache[applicantId];
   var current=(existing&&existing.suggested_pathways)||[];
   var newArr=[];var found=false;
   for(var c=0;c<current.length;c++){if(current[c]===pathway){found=true;}else{newArr.push(current[c]);}}
@@ -2104,6 +2225,7 @@ async function toggleRubricPathway(applicantId,pathway){
     }
     var r=await sb.from('interview_scores').select('*').eq('event_date',dt);
     thursdayScores=(r.data)||[];
+    await fetchRubricScore(applicantId);
   }catch(e){console.error('toggleRubricPathway error',e);}
   openRubric(applicantId);
 }
