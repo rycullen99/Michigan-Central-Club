@@ -243,7 +243,7 @@ Add Applicant</button>
 <div class="ms-wrap" id="msObTier"></div>
 <div class="ms-wrap" id="msObProgress"></div>
 </div>
-<div id="onboardingGrid" class="overflow-x-auto"></div>
+<div id="onboardingGrid" style="overflow-x:auto;max-width:calc(100vw - 15rem - 4rem);position:relative"></div>
 </div>
 
 <!-- IMPORT -->
@@ -1138,16 +1138,22 @@ function renderOnboarding(){
   const fixedCols=4;
   const totalCols=fixedCols+allStepKeys.length;
   // Using innerHTML for performance with large tables - all values are escaped via esc()
-  let h='<table class="w-full text-sm bg-white rounded-xl shadow-sm border border-warm"><thead><tr class="bg-mc-warm-light border-b" style="border-color:var(--border-warm)">';
-  h+='<th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'name\')">Member'+obSortArrow('name')+'</th>';
-  h+='<th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'email\')">Email'+obSortArrow('email')+'</th>';
-  h+='<th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'tier\')">Tier'+obSortArrow('tier')+'</th>';
-  h+='<th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'progress\')">Progress'+obSortArrow('progress')+'</th>';
+  var stickyBase='position:sticky;z-index:10;';
+  var stickyHeadBg='background:#faf8f5;';
+  var stickyL=['left:0;min-width:160px;','left:160px;min-width:180px;','left:340px;min-width:100px;','left:440px;min-width:110px;box-shadow:2px 0 4px rgba(0,0,0,0.06);'];
+  let h='<table class="text-sm bg-white rounded-xl shadow-sm border border-warm" style="border-collapse:separate;border-spacing:0"><thead><tr class="bg-mc-warm-light border-b" style="border-color:var(--border-warm)">';
+  h+='<th style="'+stickyBase+stickyHeadBg+stickyL[0]+'" class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'name\')">Member'+obSortArrow('name')+'</th>';
+  h+='<th style="'+stickyBase+stickyHeadBg+stickyL[1]+'" class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'email\')">Email'+obSortArrow('email')+'</th>';
+  h+='<th style="'+stickyBase+stickyHeadBg+stickyL[2]+'" class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'tier\')">Tier'+obSortArrow('tier')+'</th>';
+  h+='<th style="'+stickyBase+stickyHeadBg+stickyL[3]+'" class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer hover:text-mc-blue select-none" onclick="toggleObSort(\'progress\')">Progress'+obSortArrow('progress')+'</th>';
   allStepKeys.forEach(k=>{h+='<th class="'+thCls+'" onclick="toggleObSort(\''+k+'\')">'+allStepMap[k].label+obSortArrow(k)+'</th>';});
   h+='</tr></thead><tbody>';
   // Assignee row
   h+='<tr class="border-b border-slate-200" style="background:#eef2ff">';
-  h+='<td colspan="4" class="px-4 py-2 text-xs font-semibold text-indigo-600 uppercase tracking-wide">Assigned To</td>';
+  h+='<td style="'+stickyBase+'background:#eef2ff;'+stickyL[0]+'" class="px-4 py-2 text-xs font-semibold text-indigo-600 uppercase tracking-wide">Assigned To</td>';
+  h+='<td style="'+stickyBase+'background:#eef2ff;'+stickyL[1]+'"></td>';
+  h+='<td style="'+stickyBase+'background:#eef2ff;'+stickyL[2]+'"></td>';
+  h+='<td style="'+stickyBase+'background:#eef2ff;'+stickyL[3]+'"></td>';
   allStepKeys.forEach(k=>{
     h+='<td class="px-2 py-2 text-center"><input type="text" value="'+esc(obAssignees[k]||'')+'" onblur="updateObAssignee(\''+k+'\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" class="px-1 py-0.5 border border-indigo-200 rounded text-xs w-24 text-center bg-white" placeholder="\u2014"></td>';
   });
@@ -1159,11 +1165,12 @@ function renderOnboarding(){
       const steps=ONBOARDING_STEPS[a.tier]||[];
       const pct=obPct(a);
       const stepKeySet=new Set(steps.map(s=>s.key));
-      h+='<tr class="border-b border-slate-100 hover:bg-slate-50">';
-      h+='<td class="px-4 py-3 font-medium text-slate-800 whitespace-nowrap"><a href="#" onclick="event.preventDefault();openDetail(\''+a.id+'\')" class="hover:text-mc-blue">'+esc(a.first_name)+' '+esc(a.last_name)+'</a> <button onclick="event.stopPropagation();openRubricForApplicant(\''+a.id+'\')" class="text-slate-400 hover:text-mc-blue transition" title="Open Rubric">📋</button></td>';
-      h+='<td class="px-4 py-3 text-slate-500 text-xs">'+esc(a.email||'')+'</td>';
-      h+='<td class="px-3 py-3">'+tierBadge(a.tier)+'</td>';
-      h+='<td class="px-3 py-3 text-center"><div class="flex items-center gap-2 justify-center"><div class="w-16 bg-slate-200 rounded-full h-1.5"><div class="h-1.5 rounded-full '+(pct===100?'bg-green-500':'bg-mc-blue')+'" style="width:'+pct+'%"></div></div><span class="text-xs font-semibold '+(pct===100?'text-green-600':'text-slate-600')+'">'+pct+'%</span></div></td>';
+      var rowBg=stickyBase+'background:white;';
+      h+='<tr class="border-b border-slate-100 hover:bg-slate-50" style="background:white">';
+      h+='<td style="'+rowBg+stickyL[0]+'" class="px-4 py-3 font-medium text-slate-800 whitespace-nowrap"><a href="#" onclick="event.preventDefault();openDetail(\''+a.id+'\')" class="hover:text-mc-blue">'+esc(a.first_name)+' '+esc(a.last_name)+'</a> <button onclick="event.stopPropagation();openRubricForApplicant(\''+a.id+'\')" class="text-slate-400 hover:text-mc-blue transition" title="Open Rubric">📋</button></td>';
+      h+='<td style="'+rowBg+stickyL[1]+'" class="px-4 py-3 text-slate-500 text-xs">'+esc(a.email||'')+'</td>';
+      h+='<td style="'+rowBg+stickyL[2]+'" class="px-3 py-3">'+tierBadge(a.tier)+'</td>';
+      h+='<td style="'+rowBg+stickyL[3]+'" class="px-3 py-3 text-center"><div class="flex items-center gap-2 justify-center"><div class="w-16 bg-slate-200 rounded-full h-1.5"><div class="h-1.5 rounded-full '+(pct===100?'bg-green-500':'bg-mc-blue')+'" style="width:'+pct+'%"></div></div><span class="text-xs font-semibold '+(pct===100?'text-green-600':'text-slate-600')+'">'+pct+'%</span></div></td>';
       allStepKeys.forEach(k=>{
         if(!stepKeySet.has(k)){h+='<td class="px-2 py-3 text-center text-slate-200">\u2014</td>';return;}
         const s=allStepMap[k];
