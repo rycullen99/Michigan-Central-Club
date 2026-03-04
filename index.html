@@ -748,10 +748,14 @@ function renderDashboard(){
     <h2 class="text-2xl font-display" style="color:var(--text-primary)">${greet}, ${userName}</h2>
     <p class="text-sm mt-1" style="color:var(--text-secondary)">${dateStr}</p>`;
 
+  // New apps in last 7 days
+  const sevenDaysAgo=new Date();sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
+  const newLast7=allApplicants.filter(a=>{if(!a.date_applied)return false;const d=new Date(a.date_applied+'T00:00:00');return d>=sevenDaysAgo;}).length;
+
   // Stat cards with colored top accent
   const stats=[
     {label:'Total',value:t,color:'#1e3a5f',textClass:'text-mc-blue',icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'},
-    {label:'Pending',value:p,color:'#d97706',textClass:'text-amber-600',icon:'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'},
+    {label:'Pending',value:p,color:'#d97706',textClass:'text-amber-600',icon:'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',subtitle:newLast7+' new in last 7 days'},
     {label:'Accepted',value:ac,color:'#16a34a',textClass:'text-green-600',icon:'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'},
     {label:'Waitlist',value:w,color:'#7c3aed',textClass:'text-violet-600',icon:'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'},
     {label:'Denied',value:d,color:'#dc2626',textClass:'text-red-600',icon:'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'}
@@ -763,6 +767,7 @@ function renderDashboard(){
         <div>
           <p class="text-xs font-medium uppercase tracking-wide ${s.textClass}">${s.label}</p>
           <p class="text-3xl font-display ${s.textClass} mt-1 count-up">${s.value}</p>
+          ${s.subtitle?'<p class="text-[10px] text-slate-400 mt-0.5">'+s.subtitle+'</p>':''}
         </div>
         <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:${s.color}10">
           <svg class="w-5 h-5 ${s.textClass}" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${s.icon}"/></svg>
