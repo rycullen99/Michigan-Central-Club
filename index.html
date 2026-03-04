@@ -1988,6 +1988,14 @@ function renderPonyrideGrid(){
     h+='<p class="text-xs text-slate-500 mb-3">'+biz.members.length+' member'+(biz.members.length!==1?'s':'')+'</p>';
     h+='<div class="mb-2"><div class="flex justify-between text-xs text-slate-500 mb-1"><span>'+bizHours.toFixed(1)+' hrs logged</span><span>'+bizRequired+' hrs required</span></div>';
     h+='<div class="w-full rounded-full h-2 bg-slate-100"><div class="h-2 rounded-full '+(onTrack?'bg-green-500':'bg-amber-500')+'" style="width:'+Math.min(pct,100)+'%"></div></div></div>';
+    // Mentorship & Youth areas
+    var myAreas=new Set();
+    biz.members.forEach(m=>{var my=((m.details||{}).mentorship_youth||'');my.split(',').forEach(a=>{a=a.trim();if(a)myAreas.add(a);});});
+    if(myAreas.size){
+      h+='<div class="flex flex-wrap gap-1 mt-2">';
+      myAreas.forEach(a=>{h+='<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-50 text-violet-600">'+esc(a)+'</span>';});
+      h+='</div>';
+    }
     h+='<div class="flex gap-1 mt-3">';
     biz.members.slice(0,5).forEach(m=>{
       var init=((m.first_name||'')[0]||'')+((m.last_name||'')[0]||'');
