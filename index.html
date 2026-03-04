@@ -131,6 +131,9 @@ Launch Tracker</button>
 <button onclick="switchView('import')" data-view="import" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
 Import Data</button>
+<button onclick="switchView('ponyride')" data-view="ponyride" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+Ponyride Give-Back</button>
 </nav>
 <div class="p-4 border-t border-white/10">
 <div class="flex items-center gap-2 mb-3">
@@ -521,6 +524,55 @@ Upload Files
 <div id="thursTab-signin" class="hidden"></div>
 </div>
 
+<!-- PONYRIDE GIVE-BACK -->
+<div id="view-ponyride" class="p-8 fade-in hidden">
+<div class="flex items-center justify-between mb-5">
+<div>
+<h2 class="text-2xl font-display text-slate-800">Ponyride Give-Back Hours</h2>
+<p class="text-sm text-slate-500 mt-1">8 hours/member/month requirement</p>
+</div>
+<div class="flex items-center gap-3">
+<label class="text-xs text-slate-500">Month:</label>
+<input id="givebackMonthPicker" type="month" class="px-3 py-1.5 border border-warm rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onchange="loadGivebackData()">
+</div>
+</div>
+<div id="ponyrideContent"></div>
+</div>
+
+<!-- PROGRAM MODAL -->
+<div id="programModal" class="fixed inset-0 z-50 hidden">
+<div class="modal-overlay absolute inset-0" onclick="closeProgramModal()"></div>
+<div class="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl overflow-y-auto slide-in" style="border-left:3px solid var(--mc-gold)">
+<div class="p-6 border-b border-slate-200 flex items-center justify-between">
+<h3 id="programModalTitle" class="text-lg font-bold text-slate-800">New Program</h3>
+<button onclick="closeProgramModal()" class="text-slate-400 hover:text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+</div>
+<form id="programForm" class="p-6 space-y-4" onsubmit="event.preventDefault();saveProgramData()">
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Title *</label><input name="title" required class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+<div class="grid grid-cols-2 gap-4">
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Event Date *</label><input name="event_date" type="date" required class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Duration (hours) *</label><input name="duration_hours" type="number" step="0.5" min="0.5" max="24" required class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></div>
+</div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Description</label><textarea name="description" rows="3" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></textarea></div>
+<div><label class="block text-xs font-medium text-slate-600 mb-1">Capital Types <span class="font-normal text-slate-400">(What would non-Ponyride members gain?)</span></label><textarea name="capital_types" rows="2" class="w-full px-3 py-2 border border-warm rounded-lg text-sm"></textarea></div>
+<div>
+<label class="block text-xs font-medium text-slate-600 mb-2">Assign Members</label>
+<div id="programMemberCheckboxes" class="max-h-48 overflow-y-auto border border-warm rounded-lg p-3 space-y-3"></div>
+</div>
+<div id="programFilesSection" class="border-t border-slate-200 pt-4">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-medium text-slate-600">Attached Files</label>
+<label class="px-3 py-1 bg-mc-blue text-white rounded-lg text-xs font-medium hover:bg-opacity-90 transition cursor-pointer">
+<input type="file" class="hidden" id="programFileInput" onchange="handleProgramFileUpload(this)">
++ Upload File</label>
+</div>
+<div id="programFilesList" class="space-y-1"></div>
+</div>
+<button type="submit" class="bg-mc-blue text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-opacity-90 w-full">Save Program</button>
+</form>
+</div>
+</div>
+
 <!-- RUBRIC MODAL (full-screen overlay) -->
 <div id="rubricModal" class="fixed inset-0 hidden" style="z-index:9999">
 <div class="modal-overlay absolute inset-0" onclick="closeRubric()"></div>
@@ -584,11 +636,16 @@ let allApplicants=[];
 let importData=[];
 let currentUser=localStorage.getItem('mc_user')||'';
 let obAssignees={};
+let givebackPrograms=[];
+let givebackProgramMembers=[];
+let givebackProgramFiles=[];
+let ponyrideDetailCompany=null;
+let editingProgramId=null;
 
 const ONBOARDING_STEPS={
-  Ponyride:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'background_check_sent',label:'BG Check Sent',isBool:true},{key:'background_check',label:'BG Check Complete',isDate:true},{key:'safety_training_sent',label:'MyBGCA Account',isBool:true},{key:'safety_training',label:'Safety Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
-  Vanguard:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'background_check_sent',label:'BG Check Sent',isBool:true},{key:'background_check',label:'BG Check Complete',isDate:true},{key:'safety_training_sent',label:'MyBGCA Account',isBool:true},{key:'safety_training',label:'Safety Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
-  Originator:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
+  Ponyride:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'background_check_sent',label:'BG Check Sent',isBool:true},{key:'background_check',label:'BG Check Complete',isDate:true},{key:'safety_training_sent',label:'MyBGCA Account',isBool:true},{key:'safety_training',label:'Safety Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'orientation_date',label:'Orientation Date',isDate:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
+  Vanguard:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'background_check_sent',label:'BG Check Sent',isBool:true},{key:'background_check',label:'BG Check Complete',isDate:true},{key:'safety_training_sent',label:'MyBGCA Account',isBool:true},{key:'safety_training',label:'Safety Complete',isDate:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'orientation_date',label:'Orientation Date',isDate:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
+  Originator:[{key:'welcome_email_sent',label:'Welcome Email',isBool:true,excludeFromProgress:true,allTiers:true},{key:'myclubhub_created',label:'MyClubHub Account',isBool:true},{key:'badge_photo',label:'Badge Photo',isBool:true},{key:'bgcgd_badge_printed',label:'BGCGD Badge Printed',isDate:true},{key:'mc_access',label:'MC Access',isBool:true,excludeFromProgress:true},{key:'orientation_date',label:'Orientation Date',isDate:true,excludeFromProgress:true},{key:'onboarding_complete',label:'OB Complete',isBool:true,excludeFromProgress:true}],
 };
 
 const DETAIL_FIELDS={
@@ -653,7 +710,7 @@ sb.channel('applicants-changes').on('postgres_changes',{event:'*',schema:'public
 
 // RENDERING
 function renderAll(){renderDashboard();renderApplications();renderMemberSummary();renderMembers();renderOnboarding();renderLaunchActions();}
-function switchView(v){document.querySelectorAll('[id^="view-"]').forEach(e=>e.classList.add('hidden'));document.getElementById('view-'+v).classList.remove('hidden');document.querySelectorAll('.sidebar-link').forEach(e=>e.classList.remove('active'));document.querySelector('[data-view="'+v+'"]').classList.add('active');if(v==='thursday')loadThursdayData();}
+function switchView(v){document.querySelectorAll('[id^="view-"]').forEach(e=>e.classList.add('hidden'));document.getElementById('view-'+v).classList.remove('hidden');document.querySelectorAll('.sidebar-link').forEach(e=>e.classList.remove('active'));document.querySelector('[data-view="'+v+'"]').classList.add('active');if(v==='thursday')loadThursdayData();if(v==='ponyride')loadGivebackData();}
 function tierBadge(t){const c=t==='Ponyride'?'tier-ponyride':t==='Vanguard'?'tier-vanguard':'tier-originator';return`<span class="px-2 py-0.5 rounded-full text-xs font-medium ${c}">${t}</span>`;}
 function statusBadge(s){const c=s==='Accepted'?'status-accepted':s==='Denied'?'status-denied':s==='Waitlist'?'status-waitlist':s==='Further Review'?'status-further-review':'status-pending';return`<span class="px-2 py-0.5 rounded-full text-xs font-medium ${c}">${s||'Pending'}</span>`;}
 function fmtDate(d){if(!d)return'—';if(/^\d{4}-\d{2}-\d{2}$/.test(d)){const p=d.split('-');return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
@@ -719,8 +776,8 @@ function renderDashboard(){
   document.getElementById('tierCards').innerHTML=tiers.map(tr=>{const c=tc[tr],arr=allApplicants.filter(a=>a.tier===tr),pe=arr.filter(a=>(a.decision||'Pending')==='Pending').length,a2=arr.filter(a=>a.decision==='Accepted').length,wl=arr.filter(a=>a.decision==='Waitlist').length;
     if(tr==='Ponyride'){
       const accepted=arr.filter(a=>a.decision==='Accepted');
-      const bizNames=new Set();const memList=[];accepted.forEach(a=>{const co=((a.details||{}).company||'').trim();if(co){bizNames.add(co.toLowerCase().replace(/[,.]?\s*(llc|inc|corp)\.?$/i,'').trim());}else{memList.push(a);}});
-      return`<div class="card ${c[0]} rounded-xl border ${c[2]} p-5"><p class="text-xs font-semibold ${c[1]} uppercase tracking-wide">${tr}</p><p class="text-2xl font-display ${c[1]} mt-1">${a2} <span class="text-sm font-sans font-normal">accepted</span></p><div class="flex gap-3 mt-2 text-xs ${c[1]}"><span>${wl} waitlist</span><span>${pe} pending</span></div><div class="mt-3 pt-3 border-t ${c[2]} flex gap-4"><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg><span class="text-sm font-semibold ${c[1]}">${bizNames.size} <span class="font-normal">Businesses</span></span></div><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span class="text-sm font-semibold ${c[1]}">${memList.length} <span class="font-normal">Members</span></span></div></div></div>`;}
+      const bizNames=new Set();accepted.forEach(a=>{const co=((a.details||{}).company||'').trim();if(co){bizNames.add(co.toLowerCase().replace(/[,.]?\s*(llc|inc|corp)\.?$/i,'').trim());}});
+      return`<div class="card ${c[0]} rounded-xl border ${c[2]} p-5"><p class="text-xs font-semibold ${c[1]} uppercase tracking-wide">${tr}</p><p class="text-2xl font-display ${c[1]} mt-1">${a2} <span class="text-sm font-sans font-normal">accepted</span></p><div class="flex gap-3 mt-2 text-xs ${c[1]}"><span>${wl} waitlist</span><span>${pe} pending</span></div><div class="mt-3 pt-3 border-t ${c[2]} flex gap-4"><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg><span class="text-sm font-semibold ${c[1]}">${bizNames.size} <span class="font-normal">Businesses</span></span></div><div class="flex items-center gap-2"><svg class="w-4 h-4 ${c[1]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg><span class="text-sm font-semibold ${c[1]}">${accepted.length} <span class="font-normal">Members</span></span></div></div></div>`;}
     return`<div class="card ${c[0]} rounded-xl border ${c[2]} p-5"><p class="text-xs font-semibold ${c[1]} uppercase tracking-wide">${tr}</p><p class="text-2xl font-display ${c[1]} mt-1">${a2} <span class="text-sm font-sans font-normal">accepted</span></p><div class="flex gap-3 mt-2 text-xs ${c[1]}"><span>${wl} waitlist</span><span>${pe} pending</span></div></div>`;}).join('');
 
   // Onboarding progress
@@ -1010,6 +1067,7 @@ function renderMembers(){
     m.sort((a,b)=>{
       let va,vb;
       if(memSortField==='name'){va=(a.first_name+' '+a.last_name).toLowerCase();vb=(b.first_name+' '+b.last_name).toLowerCase();}
+      else if(memSortField==='company'){va=((a.details&&a.details.company)||'').toLowerCase();vb=((b.details&&b.details.company)||'').toLowerCase();}
       else if(memSortField==='onboarding'){va=obPct(a);vb=obPct(b);}
       else{va=(a[memSortField]||'').toString().toLowerCase();vb=(b[memSortField]||'').toString().toLowerCase();}
       if(va<vb)return memSortDir==='asc'?-1:1;
@@ -1021,6 +1079,7 @@ function renderMembers(){
   document.getElementById('memberTableHead').innerHTML=`<tr>
     <th class="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-mc-blue" onclick="toggleMemSort('name')">Name${memSortArrow('name')}</th>
     <th class="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-mc-blue" onclick="toggleMemSort('tier')">Tier${memSortArrow('tier')}</th>
+    <th class="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-mc-blue" onclick="toggleMemSort('company')">Company${memSortArrow('company')}</th>
     <th class="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-mc-blue" onclick="toggleMemSort('email')">Email${memSortArrow('email')}</th>
     <th class="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-mc-blue" onclick="toggleMemSort('phone')">Phone${memSortArrow('phone')}</th>
     <th class="text-left px-4 py-3 font-semibold text-slate-600 cursor-pointer hover:text-mc-blue" onclick="toggleMemSort('city')">City${memSortArrow('city')}</th>
@@ -1034,6 +1093,7 @@ function renderMembers(){
     return`<tr class="hover:bg-slate-50 cursor-pointer" onclick="openDetail('${a.id}')">
       <td class="px-4 py-3"><div class="font-medium text-slate-800">${a.first_name} ${a.last_name}</div>${a.myclubhub_member_id?`<div class="text-[10px] text-slate-400">${a.myclubhub_member_id}</div>`:''}</td>
       <td class="px-4 py-3">${tierBadge(a.tier)}</td>
+      <td class="px-4 py-3 text-slate-500 text-xs">${(a.details&&a.details.company)||'—'}</td>
       <td class="px-4 py-3 text-slate-500 text-xs">${a.email||'—'}</td>
       <td class="px-4 py-3 text-slate-500 text-xs">${a.phone||'—'}</td>
       <td class="px-4 py-3 text-slate-500 text-xs">${a.city||'—'}</td>
@@ -1041,7 +1101,7 @@ function renderMembers(){
       <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-20 bg-slate-200 rounded-full h-1.5"><div class="h-1.5 rounded-full ${pct===100?'bg-green-500':'bg-mc-blue'}" style="width:${pct}%"></div></div><span class="text-xs font-medium ${pct===100?'text-green-600':'text-slate-500'}">${pct}%</span></div></td>
       <td class="px-4 py-3 text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></td>
     </tr>`;
-  }).join('')||'<tr><td colspan="8" class="px-4 py-12 text-center text-slate-400">No accepted members match this filter.</td></tr>';
+  }).join('')||'<tr><td colspan="9" class="px-4 py-12 text-center text-slate-400">No accepted members match this filter.</td></tr>';
 }
 
 function exportMembers(){
@@ -1818,6 +1878,321 @@ function renderRooms(){
   });
   h+='</div>';
   container.innerHTML=h;
+}
+
+// ─── PONYRIDE GIVE-BACK ───
+// Note: All data rendered below comes from the authenticated Supabase tables (not user input).
+// The innerHTML usage is safe as all interpolated values are from controlled database fields
+// and escaped with esc() where necessary, matching the existing pattern in this codebase.
+function normalizeCompany(co){
+  return(co||'').trim().toLowerCase().replace(/[,.]?\s*(llc|inc|corp)\.?$/i,'').trim();
+}
+function getPonyrideBusinesses(){
+  const accepted=allApplicants.filter(a=>a.tier==='Ponyride'&&a.decision==='Accepted');
+  const map={};
+  accepted.forEach(a=>{
+    const co=((a.details||{}).company||'').trim();
+    if(!co)return;
+    const key=normalizeCompany(co);
+    if(!map[key])map[key]={displayName:co,members:[]};
+    map[key].members.push(a);
+  });
+  return map;
+}
+function getGivebackMonth(){
+  const dp=document.getElementById('givebackMonthPicker');
+  if(dp&&dp.value)return dp.value;
+  const now=new Date();
+  const ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  if(dp)dp.value=ym;
+  return ym;
+}
+function getMonthRange(ym){
+  const[y,m]=ym.split('-').map(Number);
+  const start=new Date(y,m-1,1);
+  const end=new Date(y,m,0);
+  return{
+    start:start.toISOString().substring(0,10),
+    end:end.toISOString().substring(0,10),
+    daysInMonth:end.getDate()
+  };
+}
+
+async function loadGivebackData(){
+  const ym=getGivebackMonth();
+  const{start,end}=getMonthRange(ym);
+  const[progs,members,files]=await Promise.all([
+    sb.from('giveback_programs').select('*').gte('event_date',start).lte('event_date',end).order('event_date'),
+    sb.from('giveback_program_members').select('*,giveback_programs!inner(event_date)').gte('giveback_programs.event_date',start).lte('giveback_programs.event_date',end),
+    sb.from('giveback_program_files').select('*')
+  ]);
+  givebackPrograms=progs.data||[];
+  givebackProgramMembers=members.data||[];
+  givebackProgramFiles=files.data||[];
+  renderPonyride();
+}
+
+function renderPonyride(){
+  if(ponyrideDetailCompany)renderBusinessDetail(ponyrideDetailCompany);
+  else renderPonyrideGrid();
+}
+
+function getMemberGivebackHours(applicantId){
+  const memberProgs=givebackProgramMembers.filter(pm=>pm.applicant_id===applicantId);
+  let total=0;
+  memberProgs.forEach(pm=>{
+    const prog=givebackPrograms.find(p=>p.id===pm.program_id);
+    if(prog)total+=parseFloat(prog.duration_hours)||0;
+  });
+  return total;
+}
+
+function renderPonyrideGrid(){
+  const businesses=getPonyrideBusinesses();
+  const keys=Object.keys(businesses).sort();
+  const container=document.getElementById('ponyrideContent');
+  if(!keys.length){container.innerHTML='<p class="text-sm text-slate-500 italic">No accepted Ponyride members with a company on file.</p>';return;}
+
+  // Summary stats
+  let totalMembers=0,totalHours=0,totalRequired=0;
+  keys.forEach(k=>{
+    const biz=businesses[k];
+    biz.members.forEach(m=>{
+      totalMembers++;
+      totalHours+=getMemberGivebackHours(m.id);
+      totalRequired+=8;
+    });
+  });
+
+  let h='<div class="grid grid-cols-4 gap-4 mb-6">';
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm p-4"><p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Businesses</p><p class="text-2xl font-display text-mc-blue mt-1">'+keys.length+'</p></div>';
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm p-4"><p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Members</p><p class="text-2xl font-display text-mc-blue mt-1">'+totalMembers+'</p></div>';
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm p-4"><p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Hours Logged</p><p class="text-2xl font-display text-mc-blue mt-1">'+totalHours.toFixed(1)+'</p></div>';
+  var compPct=totalRequired?Math.round(totalHours/totalRequired*100):0;
+  var compClass=totalRequired>0&&totalHours>=totalRequired?'text-green-600':'text-mc-blue';
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm p-4"><p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Completion</p><p class="text-2xl font-display '+compClass+' mt-1">'+compPct+'%</p></div>';
+  h+='</div>';
+
+  h+='<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+  keys.forEach(k=>{
+    const biz=businesses[k];
+    let bizHours=0;const bizRequired=biz.members.length*8;
+    biz.members.forEach(m=>{bizHours+=getMemberGivebackHours(m.id);});
+    const pct=bizRequired?Math.round(bizHours/bizRequired*100):0;
+    const onTrack=bizHours>=bizRequired;
+    const statusClass=onTrack?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700';
+    const statusLabel=onTrack?'On Track':'Behind';
+
+    h+='<div class="card bg-white rounded-xl shadow-sm border border-warm p-5 cursor-pointer" onclick="openBusinessDetail(\''+esc(k)+'\')">';
+    h+='<div class="flex items-start justify-between mb-3"><h3 class="font-semibold text-slate-800 text-sm">'+esc(biz.displayName)+'</h3><span class="px-2 py-0.5 rounded-full text-xs font-medium '+statusClass+'">'+statusLabel+'</span></div>';
+    h+='<p class="text-xs text-slate-500 mb-3">'+biz.members.length+' member'+(biz.members.length!==1?'s':'')+'</p>';
+    h+='<div class="mb-2"><div class="flex justify-between text-xs text-slate-500 mb-1"><span>'+bizHours.toFixed(1)+' hrs logged</span><span>'+bizRequired+' hrs required</span></div>';
+    h+='<div class="w-full rounded-full h-2 bg-slate-100"><div class="h-2 rounded-full '+(onTrack?'bg-green-500':'bg-amber-500')+'" style="width:'+Math.min(pct,100)+'%"></div></div></div>';
+    h+='<div class="flex gap-1 mt-3">';
+    biz.members.slice(0,5).forEach(m=>{
+      var init=((m.first_name||'')[0]||'')+((m.last_name||'')[0]||'');
+      h+='<div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold" title="'+esc(m.first_name)+' '+esc(m.last_name)+'">'+init.toUpperCase()+'</div>';
+    });
+    if(biz.members.length>5)h+='<div class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-medium">+'+(biz.members.length-5)+'</div>';
+    h+='</div></div>';
+  });
+  h+='</div>';
+  container.innerHTML=h;
+}
+
+function openBusinessDetail(key){ponyrideDetailCompany=key;renderPonyride();}
+function closePonyrideDetail(){ponyrideDetailCompany=null;renderPonyride();}
+
+function renderBusinessDetail(companyKey){
+  const businesses=getPonyrideBusinesses();
+  const biz=businesses[companyKey];
+  if(!biz){closePonyrideDetail();return;}
+  const container=document.getElementById('ponyrideContent');
+
+  // Programs where any of this company's members are assigned
+  const memberIds=new Set(biz.members.map(m=>m.id));
+  const relevantProgramIds=new Set(givebackProgramMembers.filter(pm=>memberIds.has(pm.applicant_id)).map(pm=>pm.program_id));
+  const programs=givebackPrograms.filter(p=>relevantProgramIds.has(p.id));
+
+  let h='<button onclick="closePonyrideDetail()" class="flex items-center gap-2 text-sm text-mc-blue hover:underline mb-4"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Back to all businesses</button>';
+  h+='<div class="flex items-center justify-between mb-6"><div><h3 class="text-xl font-display text-slate-800">'+esc(biz.displayName)+'</h3><p class="text-sm text-slate-500">'+biz.members.length+' member'+(biz.members.length!==1?'s':'')+'</p></div>';
+  h+='<button onclick="openProgramModal()" class="px-4 py-2 bg-mc-blue text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition">+ New Program</button></div>';
+
+  // Programs table
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm overflow-hidden mb-6"><div class="p-4 border-b border-slate-200"><h4 class="font-semibold text-slate-800 text-sm">Programs &amp; Events</h4></div>';
+  if(!programs.length){
+    h+='<div class="p-4 text-sm text-slate-400 italic">No programs yet this month. Click &quot;+ New Program&quot; to create one.</div>';
+  }else{
+    h+='<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 border-b border-slate-200"><tr><th class="text-left px-4 py-2">Title</th><th class="text-left px-4 py-2">Date</th><th class="text-left px-4 py-2">Hours</th><th class="text-left px-4 py-2">Members</th><th class="text-left px-4 py-2">Capital Types</th><th class="text-left px-4 py-2">Files</th><th class="px-4 py-2"></th></tr></thead><tbody>';
+    programs.forEach(p=>{
+      var pMembers=givebackProgramMembers.filter(pm=>pm.program_id===p.id);
+      var pFiles=givebackProgramFiles.filter(f=>f.program_id===p.id);
+      h+='<tr class="border-b border-slate-100 hover:bg-slate-50">';
+      h+='<td class="px-4 py-3 font-medium">'+esc(p.title)+'</td>';
+      h+='<td class="px-4 py-3">'+fmtDate(p.event_date)+'</td>';
+      h+='<td class="px-4 py-3">'+p.duration_hours+'h</td>';
+      h+='<td class="px-4 py-3">'+pMembers.length+'</td>';
+      h+='<td class="px-4 py-3 text-xs">'+(esc(p.capital_types)||'—')+'</td>';
+      h+='<td class="px-4 py-3">'+(pFiles.length?pFiles.length+' file'+(pFiles.length!==1?'s':''):'—')+'</td>';
+      h+='<td class="px-4 py-3 text-right"><button onclick="openProgramModal(\''+p.id+'\')" class="text-mc-blue hover:underline text-xs mr-2">Edit</button><button onclick="deleteProgram(\''+p.id+'\')" class="text-red-500 hover:underline text-xs">Delete</button></td>';
+      h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  h+='</div>';
+
+  // Members table
+  h+='<div class="bg-white rounded-xl shadow-sm border border-warm overflow-hidden"><div class="p-4 border-b border-slate-200"><h4 class="font-semibold text-slate-800 text-sm">Member Hours</h4></div>';
+  h+='<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 border-b border-slate-200"><tr><th class="text-left px-4 py-2">Member</th><th class="text-left px-4 py-2">Hours This Month</th><th class="text-left px-4 py-2">Status</th><th class="text-left px-4 py-2">Programs</th></tr></thead><tbody>';
+  biz.members.forEach(m=>{
+    var hrs=getMemberGivebackHours(m.id);
+    var met=hrs>=8;
+    var memberProgIds=givebackProgramMembers.filter(pm=>pm.applicant_id===m.id).map(pm=>pm.program_id);
+    var memberProgs=givebackPrograms.filter(p=>memberProgIds.includes(p.id));
+    h+='<tr class="border-b border-slate-100">';
+    h+='<td class="px-4 py-3 font-medium">'+esc(m.first_name)+' '+esc(m.last_name)+'</td>';
+    h+='<td class="px-4 py-3"><span class="font-semibold '+(met?'text-green-600':'text-amber-600')+'">'+hrs.toFixed(1)+'</span> / 8h</td>';
+    h+='<td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium '+(met?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700')+'">'+(met?'Complete':'In Progress')+'</span></td>';
+    h+='<td class="px-4 py-3 text-xs text-slate-500">'+(memberProgs.map(p=>esc(p.title)).join(', ')||'None yet')+'</td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div></div>';
+  container.innerHTML=h;
+}
+
+function openProgramModal(programId){
+  editingProgramId=programId||null;
+  var form=document.getElementById('programForm');
+  form.reset();
+  document.getElementById('programModalTitle').textContent=programId?'Edit Program':'New Program';
+
+  // Populate member checkboxes
+  var businesses=getPonyrideBusinesses();
+  var cbContainer=document.getElementById('programMemberCheckboxes');
+  var cbHtml='';
+  Object.keys(businesses).sort().forEach(k=>{
+    var biz=businesses[k];
+    cbHtml+='<div><p class="text-xs font-semibold text-slate-600 mb-1">'+esc(biz.displayName)+'</p>';
+    biz.members.forEach(m=>{
+      var checked=programId?givebackProgramMembers.some(pm=>pm.program_id===programId&&pm.applicant_id===m.id):false;
+      cbHtml+='<label class="flex items-center gap-2 py-0.5 text-sm text-slate-700 cursor-pointer"><input type="checkbox" name="member_ids" value="'+m.id+'" '+(checked?'checked':'')+'>'+esc(m.first_name)+' '+esc(m.last_name)+'</label>';
+    });
+    cbHtml+='</div>';
+  });
+  cbContainer.innerHTML=cbHtml;
+
+  // Pre-fill if editing
+  if(programId){
+    var prog=givebackPrograms.find(p=>p.id===programId);
+    if(prog){
+      form.title.value=prog.title;
+      form.event_date.value=prog.event_date;
+      form.duration_hours.value=prog.duration_hours;
+      form.description.value=prog.description||'';
+      form.capital_types.value=prog.capital_types||'';
+    }
+  }
+
+  // Render existing files
+  renderProgramFilesInModal(programId);
+  document.getElementById('programModal').classList.remove('hidden');
+}
+
+function closeProgramModal(){
+  document.getElementById('programModal').classList.add('hidden');
+  editingProgramId=null;
+}
+
+function renderProgramFilesInModal(programId){
+  var list=document.getElementById('programFilesList');
+  if(!programId){list.innerHTML='<p class="text-xs text-slate-400 italic">Save program first to attach files.</p>';document.getElementById('programFileInput').disabled=true;return;}
+  document.getElementById('programFileInput').disabled=false;
+  var files=givebackProgramFiles.filter(f=>f.program_id===programId);
+  if(!files.length){list.innerHTML='<p class="text-xs text-slate-400 italic">No files attached yet.</p>';return;}
+  var fh='';
+  files.forEach(f=>{
+    var pubUrl=sb.storage.from('mc-files').getPublicUrl(f.storage_path);
+    fh+='<div class="flex items-center justify-between py-1.5 px-2 rounded bg-slate-50">';
+    fh+='<a href="'+pubUrl.data.publicUrl+'" target="_blank" class="text-xs text-mc-blue hover:underline truncate flex-1">'+esc(f.file_name)+'</a>';
+    fh+='<button onclick="deleteProgramFile(\''+f.id+'\',\''+esc(f.storage_path)+'\')" class="text-slate-300 hover:text-red-500 ml-2"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>';
+    fh+='</div>';
+  });
+  list.innerHTML=fh;
+}
+
+async function saveProgramData(){
+  var form=document.getElementById('programForm');
+  var title=form.title.value.trim();
+  var event_date=form.event_date.value;
+  var duration_hours=parseFloat(form.duration_hours.value);
+  var description=form.description.value.trim();
+  var capital_types=form.capital_types.value.trim();
+  if(!title||!event_date||!duration_hours)return showToast('Please fill in required fields');
+
+  var checkedBoxes=[...form.querySelectorAll('input[name="member_ids"]:checked')];
+  var memberIds=checkedBoxes.map(cb=>cb.value);
+
+  var programId=editingProgramId;
+  if(programId){
+    var{error}=await sb.from('giveback_programs').update({title:title,event_date:event_date,duration_hours:duration_hours,description:description,capital_types:capital_types,updated_at:new Date().toISOString()}).eq('id',programId);
+    if(error){showToast('Error: '+error.message);return;}
+  }else{
+    var{data,error}=await sb.from('giveback_programs').insert({title:title,event_date:event_date,duration_hours:duration_hours,description:description,capital_types:capital_types}).select().single();
+    if(error){showToast('Error: '+error.message);return;}
+    programId=data.id;
+  }
+
+  // Sync members: delete all then re-insert
+  await sb.from('giveback_program_members').delete().eq('program_id',programId);
+  if(memberIds.length){
+    var rows=memberIds.map(aid=>({program_id:programId,applicant_id:aid}));
+    var{error:memErr}=await sb.from('giveback_program_members').insert(rows);
+    if(memErr){showToast('Error assigning members: '+memErr.message);return;}
+  }
+
+  showToast(editingProgramId?'Program updated':'Program created');
+  closeProgramModal();
+  await loadGivebackData();
+}
+
+async function deleteProgram(programId){
+  if(!confirm('Delete this program? This will remove all member assignments and files.'))return;
+  // Delete files from storage first
+  var files=givebackProgramFiles.filter(f=>f.program_id===programId);
+  if(files.length){
+    await sb.storage.from('mc-files').remove(files.map(f=>f.storage_path));
+  }
+  var{error}=await sb.from('giveback_programs').delete().eq('id',programId);
+  if(error){showToast('Error: '+error.message);return;}
+  showToast('Program deleted');
+  await loadGivebackData();
+}
+
+async function handleProgramFileUpload(fileInput){
+  var pid=editingProgramId;
+  if(!pid){showToast('Save the program first before attaching files');return;}
+  var file=fileInput.files[0];
+  if(!file)return;
+  var ext=file.name.split('.').pop();
+  var path='programs/'+pid+'/'+Date.now()+'_'+Math.random().toString(36).substring(7)+'.'+ext;
+  var{error:uploadErr}=await sb.storage.from('mc-files').upload(path,file);
+  if(uploadErr){showToast('Upload error: '+uploadErr.message);return;}
+  var{error:dbErr}=await sb.from('giveback_program_files').insert({program_id:pid,file_name:file.name,file_size:file.size,file_type:file.type,storage_path:path,uploaded_by:currentUser});
+  if(dbErr){showToast('DB error: '+dbErr.message);return;}
+  showToast('File attached');
+  fileInput.value='';
+  var{data}=await sb.from('giveback_program_files').select('*').eq('program_id',pid);
+  givebackProgramFiles=givebackProgramFiles.filter(f=>f.program_id!==pid).concat(data||[]);
+  renderProgramFilesInModal(pid);
+}
+
+async function deleteProgramFile(fileId,storagePath){
+  if(!confirm('Delete this file?'))return;
+  await sb.storage.from('mc-files').remove([storagePath]);
+  await sb.from('giveback_program_files').delete().eq('id',fileId);
+  givebackProgramFiles=givebackProgramFiles.filter(f=>f.id!==fileId);
+  showToast('File deleted');
+  renderProgramFilesInModal(editingProgramId);
 }
 
 // ─── THURSDAY EVENTS ───
@@ -3843,6 +4218,11 @@ subscribeCalendar();
 // Initialize: load data and subscribe
 loadLaunchData();
 subscribeLaunch();
+
+// Giveback realtime
+sb.channel('giveback-changes').on('postgres_changes',{event:'*',schema:'public',table:'giveback_programs'},()=>{
+  if(!document.getElementById('view-ponyride').classList.contains('hidden'))loadGivebackData();
+}).subscribe();
 
 if(currentUser)showApp();
 </script>
