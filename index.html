@@ -6,40 +6,47 @@
 <title>Michigan Central Boys & Girls Club — Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --mc-blue:#1e3a5f;--mc-blue-deep:#152a45;--mc-gold:#c9a227;
-  --bg-warm:#f4f2ee;--bg-card:#fff;--border-warm:#e5e2db;
-  --text-primary:#1a1a2e;--text-secondary:#525266;
-  --card-shadow:0 2px 12px rgba(30,58,95,.06);
-  --card-shadow-hover:0 8px 28px rgba(30,58,95,.10);
+  --primary:#0c1f33;--primary-mid:#162d47;
+  --accent:#3b6df0;--accent-light:#5b8af5;--accent-glow:rgba(59,109,240,.15);
+  --warm:#f06840;--warm-light:#ff8b66;
+  --mc-blue:#0c1f33;--mc-blue-deep:#0a1929;--mc-gold:#f06840;
+  --bg-warm:#f2f4f7;--bg-card:#fff;--border-warm:#e2e8f0;
+  --text-primary:#0f1729;--text-secondary:#475569;--text-muted:#94a3b8;
+  --card-shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+  --card-shadow-hover:0 4px 12px rgba(15,23,42,.06),0 2px 4px rgba(15,23,42,.03);
 }
-*{font-family:'DM Sans',sans-serif}
+*{font-family:'Figtree',sans-serif}
 body{background:var(--bg-warm);color:var(--text-primary)}
-.font-display{font-family:'DM Serif Display',serif}
-.fade-in{animation:fadeIn .3s ease}
+.font-display{font-family:'Outfit',sans-serif}
+.fade-in{animation:fadeIn .3s cubic-bezier(.16,1,.3,1)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes staggerIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.stagger-in>*{animation:staggerIn .4s ease both}
+.stagger-in>*{animation:staggerIn .4s cubic-bezier(.16,1,.3,1) both}
 .stagger-in>*:nth-child(1){animation-delay:.05s}
 .stagger-in>*:nth-child(2){animation-delay:.1s}
 .stagger-in>*:nth-child(3){animation-delay:.15s}
 .stagger-in>*:nth-child(4){animation-delay:.2s}
 .stagger-in>*:nth-child(5){animation-delay:.25s}
 @keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.count-up{animation:countUp .5s ease both;animation-delay:.2s}
+.count-up{animation:countUp .5s cubic-bezier(.16,1,.3,1) both;animation-delay:.2s}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-.loading-shimmer{background:linear-gradient(90deg,#f0eee8 25%,#e8e5dd 50%,#f0eee8 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
-.sidebar-link{transition:all .2s ease;border-left:3px solid transparent}
-.sidebar-link:hover{background:rgba(255,255,255,.08);color:#fff}
-.sidebar-link.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:var(--mc-gold)}
+.loading-shimmer{background:linear-gradient(90deg,#eef1f6 25%,#e2e8f0 50%,#eef1f6 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+/* Top nav styles */
+.dept-tab{padding:11px 22px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer;transition:all .25s cubic-bezier(.16,1,.3,1);background:none;border-top:none;border-left:none;border-right:none}
+.dept-tab:hover{color:rgba(255,255,255,.92);background:rgba(255,255,255,.04)}
+.dept-tab.active{color:#fff;border-bottom-color:var(--warm);font-weight:600}
+.sub-tab{padding:13px 20px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:var(--text-muted);border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer;transition:all .25s cubic-bezier(.16,1,.3,1);background:none;border-top:none;border-left:none;border-right:none}
+.sub-tab:hover{color:var(--accent)}
+.sub-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
 .card{transition:all .2s ease;border-color:var(--border-warm)}
 .card:hover{box-shadow:var(--card-shadow-hover);transform:translateY(-1px)}
 .modal-overlay{background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}
-.slide-in{animation:slideIn .25s ease}
+.slide-in{animation:slideIn .25s cubic-bezier(.16,1,.3,1)}
 @keyframes slideIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
-input[type=checkbox]{accent-color:#1e40af}
+input[type=checkbox]{accent-color:var(--accent)}
 .tier-ponyride{background:#dbeafe;color:#1e40af}
 .tier-vanguard{background:#fce7f3;color:#9d174d}
 .tier-originator{background:#d1fae5;color:#065f46}
@@ -48,106 +55,86 @@ input[type=checkbox]{accent-color:#1e40af}
 .status-denied{background:#fee2e2;color:#991b1b}
 .status-waitlist{background:#ede9fe;color:#5b21b6}
 .status-further-review{background:#dbeafe;color:#1e40af}
-table th{position:sticky;top:0;z-index:2;background:#faf9f6;text-transform:uppercase;letter-spacing:.05em;font-size:11px;font-weight:600;color:var(--text-secondary)}
+table th{position:sticky;top:0;z-index:2;background:#f7f8fa;text-transform:uppercase;letter-spacing:.05em;font-size:11px;font-weight:600;color:var(--text-secondary)}
 [onclick]{cursor:pointer}
 .toast{animation:toastIn .3s ease}
 @keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 .tab-btn{border-bottom:2px solid transparent;padding-bottom:8px}
-.tab-btn.active{border-color:#1e3a5f;color:#1e3a5f;font-weight:600}
+.tab-btn.active{border-color:var(--accent);color:var(--accent);font-weight:600}
 .score-star{cursor:pointer;font-size:20px;color:#cbd5e1;transition:color .15s}
 .score-star.filled{color:#eab308}
 .score-star:hover{color:#facc15}
 .section-title{position:relative;padding-bottom:8px}
-.section-title::after{content:'';position:absolute;bottom:0;left:0;width:32px;height:2px;background:var(--mc-gold);border-radius:1px}
+.section-title::after{content:'';position:absolute;bottom:0;left:0;width:32px;height:2px;background:var(--warm);border-radius:1px}
 .ms-wrap{position:relative;display:inline-block}
 .ms-btn{display:flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;cursor:pointer;white-space:nowrap;min-width:120px;justify-content:space-between}
 .ms-btn:hover{border-color:#94a3b8}
-.ms-btn .ms-count{background:#1e3a5f;color:#fff;font-size:10px;padding:1px 6px;border-radius:9px;margin-left:4px}
+.ms-btn .ms-count{background:var(--accent);color:#fff;font-size:10px;padding:1px 6px;border-radius:9px;margin-left:4px}
 .ms-drop{position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;min-width:180px;max-height:240px;overflow-y:auto;padding:4px}
 .ms-drop.hidden{display:none}
 .ms-opt{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:#334155;transition:background .1s}
 .ms-opt:hover{background:#f1f5f9}
 .ms-opt.selected{background:#eff6ff;color:#1e40af;font-weight:500}
 .ms-opt .ms-check{width:16px;height:16px;border:2px solid #cbd5e1;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
-.ms-opt.selected .ms-check{background:#1e3a5f;border-color:#1e3a5f;color:#fff}
+.ms-opt.selected .ms-check{background:var(--accent);border-color:var(--accent);color:#fff}
 </style>
 <script>
-tailwind.config={theme:{extend:{colors:{mc:{blue:'#1e3a5f','blue-deep':'#152a45',gold:'#c9a227',light:'#f8fafc',warm:'#f4f2ee','warm-light':'#faf9f6'}},fontFamily:{display:['"DM Serif Display"','serif'],sans:['"DM Sans"','sans-serif']},borderColor:{warm:'#e5e2db'}}}}
+tailwind.config={theme:{extend:{colors:{mc:{blue:'#0c1f33','blue-deep':'#0a1929',gold:'#f06840',light:'#f8fafc',warm:'#f2f4f7','warm-light':'#f7f8fa'}},fontFamily:{display:['"Outfit"','sans-serif'],sans:['"Figtree"','sans-serif']},borderColor:{warm:'#e2e8f0'}}}}
 </script>
 </head>
 <body class="min-h-screen">
 
 <!-- LOGIN GATE -->
-<div id="loginScreen" class="min-h-screen flex items-center justify-center relative overflow-hidden" style="background:linear-gradient(135deg,#152a45 0%,#1e3a5f 50%,#2a4f7f 100%)">
+<div id="loginScreen" class="min-h-screen flex items-center justify-center relative overflow-hidden" style="background:linear-gradient(135deg,var(--primary) 0%,var(--primary-mid) 50%,#1a3a5c 100%)">
 <div class="absolute inset-0 opacity-[0.04]" style="background:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(201,162,39,.5) 40px,rgba(201,162,39,.5) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(201,162,39,.5) 40px,rgba(201,162,39,.5) 41px)"></div>
 <div class="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-sm text-center relative z-10">
 <div class="mb-6">
-<div class="w-16 h-16 bg-mc-blue rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg" style="box-shadow:0 0 24px rgba(201,162,39,.25)">
-<svg class="w-8 h-8 text-mc-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+<div class="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg" style="background:var(--primary);box-shadow:0 0 24px rgba(59,109,240,.25)">
+<svg class="w-8 h-8" style="color:var(--warm)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
 </div>
-<h1 class="text-xl font-display text-mc-blue">Michigan Central</h1>
+<h1 class="text-xl font-display font-bold" style="color:var(--primary)">Michigan Central</h1>
 <p class="text-sm text-slate-500 mt-1">Boys & Girls Club — Dashboard</p>
 </div>
 <input id="nameInput" type="text" placeholder="Enter your full name" class="w-full px-4 py-3 border border-warm rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-mc-blue" onkeydown="if(event.key==='Enter')doLogin()">
-<button onclick="doLogin()" class="w-full mt-4 bg-mc-blue text-white py-3 rounded-lg font-semibold hover:bg-opacity-90 transition">Sign In</button>
+<button onclick="doLogin()" class="w-full mt-4 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition" style="background:var(--primary)">Sign In</button>
 <p id="pwError" class="text-red-500 text-sm mt-3 hidden">Please enter your name</p>
 </div>
 </div>
 
 <!-- MAIN APP -->
-<div id="mainApp" class="hidden min-h-screen flex">
+<div id="mainApp" class="hidden min-h-screen">
 
-<!-- SIDEBAR -->
-<aside class="w-60 text-slate-300 flex flex-col fixed h-full z-30" style="background:linear-gradient(to bottom,#1e3a5f,#152a45);border-top:2px solid var(--mc-gold)">
-<div class="p-5 border-b border-white/10">
-<h1 class="text-white font-display text-lg leading-tight">Michigan Central</h1>
-<p class="text-xs text-mc-gold mt-0.5">Boys & Girls Club — Dashboard</p>
+<!-- HEADER -->
+<header class="relative" style="background:linear-gradient(135deg,var(--primary) 0%,var(--primary-mid) 60%,#1a3a5c 100%);padding:18px 32px">
+<div class="flex items-center justify-between">
+<div onclick="switchDept('dashboard')" class="cursor-pointer">
+<h1 class="font-display text-2xl font-extrabold" style="letter-spacing:-0.02em;background:linear-gradient(135deg,#fff 0%,#c7d2fe 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Michigan Central</h1>
+<div class="text-xs mt-0.5" style="font-family:'Figtree';color:rgba(255,255,255,.55);letter-spacing:.04em">Boys & Girls Club — Dashboard</div>
 </div>
-<nav class="flex-1 py-4 px-3 space-y-1">
-<button onclick="switchView('dashboard')" data-view="dashboard" class="sidebar-link active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zm0 7a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5zm-10-2a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5z"/></svg>
-Dashboard</button>
-<button onclick="switchView('applications')" data-view="applications" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-Applications</button>
-<button onclick="switchView('members')" data-view="members" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-Membership</button>
-<button onclick="switchView('onboarding')" data-view="onboarding" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-Onboarding</button>
-<button onclick="switchView('calendar')" data-view="calendar" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-Calendar</button>
-<button onclick="switchView('files')" data-view="files" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-Files</button>
-<button onclick="switchView('thursday')" data-view="thursday" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-Thursday Events</button>
-<button onclick="switchView('launch')" data-view="launch" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-Launch Tracker</button>
-<button onclick="switchView('import')" data-view="import" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-Import Data</button>
-<button onclick="switchView('ponyride')" data-view="ponyride" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
-<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-Ponyride Give-Back</button>
+<div class="flex items-center gap-3">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style="background:rgba(255,255,255,.08);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.9)">
+<div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style="background:linear-gradient(135deg,rgba(59,109,240,.4),rgba(240,104,64,.3))" id="userAvatar"></div>
+<span id="userDisplayName" class="font-medium"></span>
+<button onclick="doLogout()" class="ml-1 hover:text-white transition" style="color:rgba(255,255,255,.55);font-size:11px">Sign Out</button>
+</div>
+</div>
+</div>
+</header>
+
+<!-- DEPARTMENT TABS -->
+<nav class="flex overflow-x-auto" style="background:var(--primary);padding:0 24px;border-bottom:1px solid rgba(255,255,255,.06);z-index:100" id="deptNav">
+<button onclick="switchDept('tasks')" data-dept="tasks" class="dept-tab">Task Tracking</button>
+<button onclick="switchDept('cal')" data-dept="cal" class="dept-tab">Calendar</button>
+<button onclick="switchDept('apps')" data-dept="apps" class="dept-tab">Applications</button>
+<button onclick="switchDept('membership')" data-dept="membership" class="dept-tab">Membership</button>
+<button onclick="switchDept('filesdata')" data-dept="filesdata" class="dept-tab">Files & Data</button>
 </nav>
-<div class="p-4 border-t border-white/10">
-<div class="flex items-center gap-2 mb-3">
-<div class="w-8 h-8 rounded-full bg-mc-gold flex items-center justify-center text-mc-blue text-xs font-bold ring-2 ring-mc-gold/30" id="userAvatar"></div>
-<span class="text-xs text-white truncate" id="userDisplayName"></span>
-</div>
-<button onclick="doLogout()" class="w-full text-xs text-slate-400 hover:text-white transition flex items-center gap-2 justify-center">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-Sign Out</button>
-</div>
-</aside>
+
+<!-- SUB-TABS -->
+<div id="subTabBar" class="hidden flex overflow-x-auto" style="background:#fff;padding:0 24px;border-bottom:1px solid var(--border-warm);z-index:10"></div>
 
 <!-- CONTENT -->
-<main class="ml-60 flex-1 min-h-screen">
+<main class="flex-1 min-h-screen">
 
 <!-- DASHBOARD -->
 <div id="view-dashboard" class="p-8 fade-in">
@@ -681,6 +668,7 @@ function showApp(){
   document.getElementById('userAvatar').textContent=initials;
   document.getElementById('userDisplayName').textContent=currentUser;
   loadData();
+  switchDept('dashboard');
 }
 
 // DATA
@@ -710,7 +698,57 @@ sb.channel('applicants-changes').on('postgres_changes',{event:'*',schema:'public
 
 // RENDERING
 function renderAll(){renderDashboard();renderApplications();renderMemberSummary();renderMembers();renderOnboarding();renderLaunchActions();}
-function switchView(v){document.querySelectorAll('[id^="view-"]').forEach(e=>e.classList.add('hidden'));document.getElementById('view-'+v).classList.remove('hidden');document.querySelectorAll('.sidebar-link').forEach(e=>e.classList.remove('active'));document.querySelector('[data-view="'+v+'"]').classList.add('active');if(v==='thursday')loadThursdayData();if(v==='ponyride')loadGivebackData();}
+// Department → sub-tab mapping
+var DEPT_TABS={
+  tasks:[{key:'launch',label:'Launch Tracker'}],
+  cal:[{key:'calendar',label:'Calendar'}],
+  apps:[{key:'applications',label:'Applications'},{key:'thursday',label:'Thursday Events'}],
+  membership:[{key:'members',label:'Members'},{key:'onboarding',label:'Onboarding'},{key:'ponyride',label:'Ponyride Give-Back'}],
+  filesdata:[{key:'files',label:'Files'},{key:'import',label:'Import Data'}]
+};
+var currentDept=null;
+
+function switchDept(dept){
+  // Dashboard is special — no department active
+  if(dept==='dashboard'){
+    currentDept=null;
+    document.querySelectorAll('.dept-tab').forEach(e=>e.classList.remove('active'));
+    document.getElementById('subTabBar').classList.add('hidden');
+    document.getElementById('subTabBar').innerHTML='';
+    switchView('dashboard');
+    return;
+  }
+  currentDept=dept;
+  // Highlight dept tab
+  document.querySelectorAll('.dept-tab').forEach(e=>e.classList.remove('active'));
+  var dt=document.querySelector('[data-dept="'+dept+'"]');
+  if(dt)dt.classList.add('active');
+  // Render sub-tabs
+  var tabs=DEPT_TABS[dept]||[];
+  var bar=document.getElementById('subTabBar');
+  if(tabs.length<=1){
+    bar.classList.add('hidden');
+    bar.innerHTML='';
+  }else{
+    bar.classList.remove('hidden');
+    bar.innerHTML=tabs.map(t=>'<button onclick="switchView(\''+t.key+'\')" data-subtab="'+t.key+'" class="sub-tab">'+t.label+'</button>').join('');
+  }
+  // Switch to first sub-tab
+  switchView(tabs[0].key);
+}
+
+function switchView(v){
+  document.querySelectorAll('[id^="view-"]').forEach(e=>e.classList.add('hidden'));
+  var el=document.getElementById('view-'+v);
+  if(el)el.classList.remove('hidden');
+  // Highlight sub-tab
+  document.querySelectorAll('.sub-tab').forEach(e=>e.classList.remove('active'));
+  var st=document.querySelector('[data-subtab="'+v+'"]');
+  if(st)st.classList.add('active');
+  // Trigger data loading
+  if(v==='thursday')loadThursdayData();
+  if(v==='ponyride')loadGivebackData();
+}
 function tierBadge(t){const c=t==='Ponyride'?'tier-ponyride':t==='Vanguard'?'tier-vanguard':'tier-originator';return`<span class="px-2 py-0.5 rounded-full text-xs font-medium ${c}">${t}</span>`;}
 function statusBadge(s){const c=s==='Accepted'?'status-accepted':s==='Denied'?'status-denied':s==='Waitlist'?'status-waitlist':s==='Further Review'?'status-further-review':'status-pending';return`<span class="px-2 py-0.5 rounded-full text-xs font-medium ${c}">${s||'Pending'}</span>`;}
 function fmtDate(d){if(!d)return'—';if(/^\d{4}-\d{2}-\d{2}$/.test(d)){const p=d.split('-');return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
